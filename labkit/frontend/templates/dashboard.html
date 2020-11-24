@@ -1,0 +1,10 @@
+<title>LabKit - Dashboard</title>
+<link rel="stylesheet" href="static/css/style.css">
+<div class="container">
+    <h1 class="title">Dashboard</h1>
+    {% if tensorboard %}
+        <p>
+            <a href="http://localhost:{{ tensorboard }}" target="_blank">Tensorboard</a>
+        </p>
+    {% endif %}
+</div>
