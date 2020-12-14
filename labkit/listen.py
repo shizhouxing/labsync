@@ -6,7 +6,6 @@ import json
 import labkit.utils
 from labkit.watchfs import WatchFS
 from labkit.tensorboard import Tensorboard
-from labkit.dashboard import Dashboard
 
 logger = logging.getLogger(__name__)
 
@@ -25,26 +24,14 @@ def listen():
     logger.info('Config: {}'.format(config))
 
     tasks = []
+    tasks_all = ['WatchFS', 'Tensorboard', 'TaskManager']
 
-    if 'watchfs' in config:
-        watchfs = WatchFS(config['watchfs'])
-        watchfs.start()
-        tasks.append(watchfs)
-        logger.info('Started WatchFS task')
-
-    if 'tensorboard' in config:
-        tensorboard = Tensorboard(config['tensorboard'])
-        tensorboard.start()
-        tasks.append(tensorboard)
-        logger.info('Started Tensorboard task')
-    else:
-        tensorboard = None
-
-    if 'dashboard' in config:
-        dashboard = Dashboard(config['dashboard'], tensorboard=tensorboard)    
-        dashboard.start()
-        tasks.append(dashboard)
-        logger.info('Started Dashboard task')
+    for item in tasks_all:
+        if item.lower() in config:
+            task = eval(item)(config[item.lower()])
+            task.start()
+            tasks.append(task)
+            logger.info('Started task: {}'.format(item))
 
     for task in tasks:
         task.join()

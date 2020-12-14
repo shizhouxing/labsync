@@ -1,12 +1,4 @@
 from setuptools import setup
-import sass
-
-# Compile sass to css
-print('Compiling sass')
-sass.compile(    
-    dirname=('labkit/frontend/static/sass', 'labkit/frontend/static/css'),
-    output_style='compressed'
-)
 
 setup(
     name='labkit',
@@ -29,3 +21,5 @@ setup(
     platforms=['any'],
     license='BSD',
 )
+
+
