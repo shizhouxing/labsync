@@ -8,9 +8,9 @@ This toolkit is also intended to include some other shortcuts that may be freque
 
 Currently we only have an initial implementation and it is under development for optimizing file synchronization and extending functionalities.
 
-## Installation
+## Getting started
 
-The code is based on Python 3. To install, run:
+The code is based on Python 3. To install it, run:
 
 ```bash
 python setup.py install
@@ -18,49 +18,22 @@ python setup.py install
 
 Or run `python setup.py develop` for development.
 
-## Usage
-
 For major functionalities, run:
 
-```
+```bash
 lab CONFIG_FILE_PATH
 ```
 
-There should be a configuration JSON file at the `CONFIG_FILE_PATH` path.  The path is set to `config.json` by default. The configuration file contains several items where each corresponds to an integrated functionality. See details below.
+where there needs to be a configuration JSON file at the `CONFIG_FILE_PATH` path.  The path is set to `config.json` by default. The configuration file contains several items where each corresponds to an integrated functionality. To initialize a configuration file with a guide, run:
 
-## Functionalities
-
-### WatchFS
-
-Watch for changes in the local file system and synchronize them to multiple remote servers. To enable it, add an item to the configuration:
-
-```
-"watchfs": {
-    "servers": {
-        "server-name": {
-            "username": "username",
-            "host": "host",
-            "port": 22,
-            "jump": "username@host"
-        }
-    },
-    "ignore_patterns": [
-        "*/.git/*"
-    ]
-}
+```bash
+lab init
 ```
 
-Each item in `servers` correspond to an SSH connection to a server: `ssh [-p PORT] [-J JUMP] USERNAME@HOST`, where `port` and `jump` are optional arguments. `ignore_patterns` stands for ignoring files that match any of the patterns.
+## List of Functionalities
 
-### Tensorboard
+See the [configuration format of the functionalities](https://github.com/shizhouxing/labkit/wiki/Configurations).
 
-Start a Tensorboard server locally. To enable it, add the following item to the configuration:
+* `WatchFS`: Watch for changes in the local file system and synchronize them to multiple remote servers.
 
-```Json
-"tensorboard": {
-    "port": 9000,
-    "logdir": "tensorboard"
-}
-```
-
-This configuration corresponds to starting a tensorboard server with `tensorboard --port PORT --logdir LOGDIR`.
+* `Tensorboard`: Start a Tensorboard server locally.

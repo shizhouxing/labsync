@@ -1,7 +1,3 @@
-"""
-Template for creating new functionalities
-"""
-
 import logging
 import argparse
 import json
