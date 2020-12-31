@@ -84,6 +84,7 @@ def init():
         except:
             raise ValueError('Failed to parse SSH command: {}'.format(ssh))
         config['watchfs']['servers'][alias]['dest'] = dest
+        config['watchfs']['servers'][alias]['enable'] = True
 
     tb = get_bool('Use Tensorboard?', default=False)
     if tb:

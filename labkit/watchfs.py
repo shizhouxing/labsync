@@ -18,7 +18,8 @@ class WatchFS(Thread):
 
         servers = []
         for server, conf in config['servers'].items():
-            servers.append(Server(server, conf))
+            if conf.get('enable', True):
+                servers.append(Server(server, conf))
 
         synchronizer = Synchronizer(servers, path)
         event_handler = FSEventHandler(
