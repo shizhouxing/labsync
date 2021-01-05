@@ -16,19 +16,19 @@ class WatchFS(Thread):
 
         path = '.'
 
-        servers = []
+        self.servers = []
         for server, conf in config['servers'].items():
             if conf.get('enable', True):
-                servers.append(Server(server, conf))
+                self.servers.append(Server(server, conf))
 
-        synchronizer = Synchronizer(servers, path)
-        event_handler = FSEventHandler(
+        synchronizer = Synchronizer(self.servers, path)
+        self.event_handler = FSEventHandler(
             synchronizer, 
             patterns=config.get('patterns', None), 
             ignore_patterns=config.get('ignore_patterns', None)
         )
         self.observer = Observer()
-        self.observer.schedule(event_handler, path, recursive=True)
+        self.observer.schedule(self.event_handler, path, recursive=True)
 
     def run(self):
         self.observer.start()
@@ -38,3 +38,11 @@ class WatchFS(Thread):
         except KeyboardInterrupt:
             self.observer.stop()
         self.observer.join()
+
+    def pause(self):
+        self.event_handler.pause()
+        logger.info('WatchFS paused')
+
+    def resume(self):
+        self.event_handler.resume()
+        logger.info('WatchFS resumed')

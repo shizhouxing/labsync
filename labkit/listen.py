@@ -23,15 +23,27 @@ def listen():
         config = json.load(file)
     logger.info('Config: {}'.format(config))
 
-    tasks = []
+    tasks = {}
     tasks_all = ['WatchFS', 'Tensorboard', 'TaskManager']
 
     for item in tasks_all:
         if item.lower() in config:
             task = eval(item)(config[item.lower()])
             task.start()
-            tasks.append(task)
+            tasks[item] = task
             logger.info('Started task: {}'.format(item))
+
+    while True:
+        line = input().split()
+        command = line[0].lower()
+        if line[0] == 'pause':
+            if 'WatchFS' in tasks:
+                tasks['WatchFS'].pause()
+        elif line[0] == 'resume':
+            if 'WatchFS' in tasks:
+                tasks['WatchFS'].resume()
+        else:
+            print('Unknown input')
 
     for task in tasks:
         task.join()

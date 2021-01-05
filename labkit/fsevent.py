@@ -8,6 +8,13 @@ class FSEventHandler(PatternMatchingEventHandler):
     def __init__(self, synchronizer, patterns=None, ignore_patterns=None):
         super().__init__(patterns, ignore_patterns)
         self.synchronizer = synchronizer
+        self.paused = False
+
+    def dispatch(self, event):
+        if self.paused:
+            pass
+        else:
+            super().dispatch(event)    
 
     def on_moved(self, event):
         self.synchronizer.mv(event.src_path, event.dest_path)
@@ -32,3 +39,9 @@ class FSEventHandler(PatternMatchingEventHandler):
             self.synchronizer.upload(event.src_path)          
         else:
             raise TypeError
+
+    def pause(self):
+        self.paused = True
+
+    def resume(self):
+        self.paused = False
