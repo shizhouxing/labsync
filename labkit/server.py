@@ -2,6 +2,7 @@ import os
 import time
 import threading
 import logging
+import subprocess
 from collections import deque
 from threading import Thread, Lock
 
@@ -53,27 +54,22 @@ class Server(Thread):
 
             time.sleep(self.refresh_interval)
 
-    def _exec(self, cmd):
-        logger.info('Server {}: executing {}'.format(self.name, cmd))
-        os.system(cmd)
-        logger.info('Server {}: done'.format(self.name))
-
     def _upload(self, path):
-        args = ''
+        args = []
         if self.jump: 
-            args += '-J {} '.format(self.jump)
+            args += ['-J', self.jump]
         if self.port:
-            args += '-P {} '.format(self.port)
-        cmd = 'scp {} {} {}@{}:{}'.format(
-            args, path, self.username, self.host, 
-            os.path.join(self.dest_root, path)
-        )
-        self._exec(cmd)
+            args += ['-P', str(self.port)]
+        args.append(path)
+        args.append('{}@{}:{}'.format(
+            self.username, self.host, os.path.join(self.dest_root, path)))
+        logger.info('Server {}: executing scp {}'.format(self.name, args))
+        subprocess.run(['scp'] + args)
 
     def _mkdir(self, path):
-        print('handle mkdir', path)
+        print('TODO mkdir', path)
         #raise NotImplementedError
 
     def _mv(self, src_path, dest_path):
-        print('handle mv', src_path, dest_path)
+        print('TODO mv', src_path, dest_path)
         #raise NotImplementedError
