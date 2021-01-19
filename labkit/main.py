@@ -5,13 +5,14 @@ import labkit.utils
 from labkit.listen import listen
 from labkit.tb_update import tb_update
 from labkit.init import init
+from labkit.file_transfer import file_transfer
 
 logger = logging.getLogger(__name__)
 
 def get_global_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', type=str, default='listen', 
-                        choices=['listen', 'tb-update', 'init'], 
+                        choices=['listen', 'tb-update', 'init', 'get', 'put'], 
                         nargs='?', help='Command of this run')
     return parser
 
@@ -21,6 +22,8 @@ def cli_main():
         listen()
     elif args.command == 'tb-update':
         tb_update()
+    elif args.command in ['get', 'put']:
+        file_transfer()
     elif args.command == 'init':
         init()
 

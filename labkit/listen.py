@@ -4,6 +4,7 @@ import argparse
 import os
 import json
 import labkit.utils
+from labkit.utils import get_config
 from labkit.watchfs import WatchFS
 from labkit.tensorboard import Tensorboard
 
@@ -17,10 +18,7 @@ def get_parser():
 def listen():
     args = get_parser().parse_args(sys.argv[2:])
 
-    if not os.path.exists(args.config):
-        raise ValueError('Configuration file {} does not exist'.format(args.config))
-    with open(args.config) as file:
-        config = json.load(file)
+    config = get_config(args.config)
     logger.info('Config: {}'.format(config))
 
     tasks = {}
