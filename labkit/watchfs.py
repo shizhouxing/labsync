@@ -1,6 +1,7 @@
 import sys
 import time
 import logging
+import argparse
 import labkit.utils
 from labkit.sync import Synchronizer
 from labkit.fsevent import FSEventHandler
@@ -10,16 +11,24 @@ from threading import Thread
 
 logger = logging.getLogger(__name__)
 
+def get_parser():
+    parser = argparse.ArgumentParser(prog='lab listen')
+    parser.add_argument('--destination', '-d', type=str, default='~', help='Destination directory on the remote servers')
+    return parser
+
 class WatchFS(Thread):
     def __init__(self, config):
         super().__init__()
 
+        args, _ = get_parser().parse_known_args(sys.argv[min(len(sys.argv), 1):])
+
         path = '.'
+        destination = args.destination
 
         self.servers = []
         for server, conf in config['servers'].items():
             if conf.get('enable', True):
-                self.servers.append(Server(server, conf))
+                self.servers.append(Server(server, conf, destination))
 
         synchronizer = Synchronizer(self.servers, path)
         self.event_handler = FSEventHandler(

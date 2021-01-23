@@ -16,7 +16,7 @@ def get_global_parser():
                         choices=['listen', 'tb-update', 'init', 'get', 'put', 'task'], 
                         nargs='?', help='Command of this run')
     return parser
-
+    
 def cli_main():
     args, _ = get_global_parser().parse_known_args()
     if args.command == 'listen':

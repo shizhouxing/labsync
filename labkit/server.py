@@ -9,14 +9,14 @@ from threading import Thread, Lock
 logger = logging.getLogger(__name__)
 
 class Server(Thread):
-    def __init__(self, name, config, refresh_interval=0.05):
+    def __init__(self, name, config, destination, refresh_interval=0.05):
         super().__init__()
         self.name = name
         self.username = config['username']
         self.host = config['host']
         self.jump = config.get('jump', None)
         self.port = config.get('port', 22)
-        self.dest_root = config.get('dest', '~')
+        self.dest_root = destination
         self.refresh_interval = refresh_interval
         self.tasks = deque()
         self.lock = Lock()
