@@ -22,7 +22,7 @@ def listen():
     logger.info('Config: {}'.format(config))
 
     tasks = {}
-    tasks_all = ['WatchFS', 'Tensorboard', 'TaskManager']
+    tasks_all = ['WatchFS', 'Tensorboard']
 
     for item in tasks_all:
         if item.lower() in config:

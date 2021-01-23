@@ -11,7 +11,8 @@ setup(
       'watchdog>=0.10',
       'flask>=1.1',
       'libsass>=0.20',
-      'appdirs>=1.4'
+      'appdirs>=1.4',
+      'oslo.concurrency>=4.2',      
     ],
     entry_points={
       'console_scripts': [
