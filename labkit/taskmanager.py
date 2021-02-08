@@ -109,7 +109,9 @@ class TaskManager(Thread):
         env['CUDA_VISIBLE_DEVICES'] = str(device)
         process = subprocess.Popen(
             ['bash', path], env=env,
-            stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT)
+        self.device_last_used[device] = time.time()            
 
     def run(self):
         # TODO Currently, we always use one full GPU for each task
@@ -118,7 +120,6 @@ class TaskManager(Thread):
             devices = self._find_device(memory=11000) 
             if len(devices) > 0:
                 self._run_task(devices[0])
-                self.device_last_used[devices[0]] = time.time()
             else:
                 time.sleep(5)
 
