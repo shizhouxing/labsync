@@ -1,4 +1,4 @@
-# LabKit
+# LabSync
 
 This is a toolkit for development on university lab servers. 
 The major functionality is to watch local file changes and synchronize them to multiple remote servers.
@@ -32,7 +32,7 @@ lab init
 
 ## List of Functionalities
 
-See the [configuration format of the functionalities](https://github.com/shizhouxing/labkit/wiki/Configurations).
+See the [configuration format of the functionalities](https://github.com/shizhouxing/labsync/wiki/Configurations).
 
 * `WatchFS`: Watch for changes in the local file system and synchronize them to multiple remote servers.
 

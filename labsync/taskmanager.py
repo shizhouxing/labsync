@@ -8,11 +8,10 @@ import logging
 import os
 import subprocess
 import argparse
-import labkit.utils
 from threading import Thread
 from oslo_concurrency import lockutils, processutils
 from oslo_concurrency.lockutils import synchronized
-from labkit.utils import user_data_dir
+from .utils import user_data_dir
 from shutil import copyfile
 
 logger = logging.getLogger(__name__)

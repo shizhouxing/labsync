@@ -3,10 +3,9 @@ import logging
 import argparse
 import os
 import json
-import labkit.utils
-from labkit.utils import get_config
-from labkit.watchfs import WatchFS
-from labkit.tensorboard import Tensorboard
+from .utils import get_config
+from .watchfs import WatchFS
+from .tensorboard import Tensorboard
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ def listen():
     if not 'watchfs' in config:
         raise ValueError('Missing `watchfs` item in the configuration file')
     else:
-        task_watchfs = WatchFS(config['watchfs'])
+        task_watchfs = WatchFS(config)
         task_watchfs.start()
         logger.info('Start listening for local file changes')
 

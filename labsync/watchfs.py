@@ -2,10 +2,9 @@ import sys
 import time
 import logging
 import argparse
-import labkit.utils
-from labkit.sync import Synchronizer
-from labkit.fsevent import FSEventHandler
-from labkit.server import Server
+from .sync import Synchronizer
+from .fsevent import FSEventHandler
+from .server import Server
 from watchdog.observers import Observer
 from threading import Thread
 
@@ -23,18 +22,18 @@ class WatchFS(Thread):
         args, _ = get_parser().parse_known_args(sys.argv[min(len(sys.argv), 1):])
 
         path = '.'
-        destination = args.destination
 
         self.servers = []
         for server, conf in config['servers'].items():
             if conf.get('enable', True):
-                self.servers.append(Server(server, conf, destination))
+                dest = conf.get('dest') or args.destination
+                self.servers.append(Server(server, conf, dest))
 
         synchronizer = Synchronizer(self.servers, path)
         self.event_handler = FSEventHandler(
             synchronizer, 
-            patterns=config.get('patterns', None), 
-            ignore_patterns=config.get('ignore_patterns', None)
+            patterns=config['watchfs'].get('patterns', None), 
+            ignore_patterns=config['watchfs'].get('ignore_patterns', None)
         )
         self.observer = Observer()
         self.observer.schedule(self.event_handler, path, recursive=True)

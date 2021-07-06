@@ -1,26 +1,24 @@
 from setuptools import setup
 
 setup(
-    name='labkit',
+    name='labsync',
     version='0.1',
-    description='Toolkit for development on university lab servers',
+    description='Toolkit for synchronizing works with university lab servers',
     author='Zhouxing Shi',
     author_email='zhouxingshichn@gmail.com',
-    packages=['labkit'],
+    packages=['labsync'],
     install_requires=[
       'watchdog>=0.10',
       'flask>=1.1',
-      'libsass>=0.20',
       'appdirs>=1.4',
-      'oslo.concurrency>=4.2',      
+      'oslo.concurrency>=4.2',  
+      'pydrive>=1.3'    
     ],
     entry_points={
       'console_scripts': [
-          'lab = labkit.main:cli_main'
+          'lab = labsync.main:cli_main'
       ],
     },    
     platforms=['any'],
     license='BSD',
 )
-
-

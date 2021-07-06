@@ -10,15 +10,21 @@ def get_parser():
 
 config = {
     "watchfs": {
-        "servers": {},   
         "ignore_patterns": [
-            "__pycache__"            
             "*/.git/*",
+            "log",
             "*/events.*",
-            "./tensorboard/*",
-            "log",            
+            "./tensorboard*/*",
+            "data",
+            "__pycache__",
+            ".DS_Store",
+            ".pytest_cache",
+            "results*",
+            "*.lp",
+            "*.pyc"                      
         ]
-    }
+    },
+    "servers": {}
 }
 
 def get_bool(question, default=True):
@@ -65,7 +71,7 @@ def init():
     print()
 
     while True:
-        n = len(config['watchfs']['servers']) 
+        n = len(config['servers']) 
 
         if n == 0:
             add = get_bool('Add a server?', default=True)
@@ -80,11 +86,11 @@ def init():
         alias = get_str('Server alias (default: {}): '.format(default_alias), default=default_alias)
 
         try:
-            config['watchfs']['servers'][alias] = parse_ssh(ssh)
+            config['servers'][alias] = parse_ssh(ssh)
         except:
             raise ValueError('Failed to parse SSH command: {}'.format(ssh))
-        config['watchfs']['servers'][alias]['dest'] = dest
-        config['watchfs']['servers'][alias]['enable'] = True
+        config['servers'][alias]['dest'] = dest
+        config['servers'][alias]['enable'] = True
 
     tb = get_bool('Use Tensorboard?', default=False)
     if tb:
@@ -95,7 +101,7 @@ def init():
             'logdir': logdir
         }
     
-    with open('config.json', 'w') as file:
+    path = '.labsync-config.json'
+    with open(path, 'w') as file:
         file.write(json.dumps(config, indent=4))
-
-    print('Configuration file saved to config.json')
+    print('Configuration file saved to {}'.format(path))

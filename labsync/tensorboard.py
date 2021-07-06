@@ -3,7 +3,6 @@ import time
 import logging
 import subprocess
 import argparse
-import labkit.utils
 from threading import Thread
 
 logger = logging.getLogger(__name__)
