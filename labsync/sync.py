@@ -1,3 +1,5 @@
+import os
+
 class Synchronizer:
     def __init__(self, servers, local_root):
         self.servers = servers
@@ -10,7 +12,7 @@ class Synchronizer:
             server.add_task(task)
 
     def _parse_path(self, path):
-        return path
+        return os.path.relpath(path)
 
     def upload(self, path):
         self._add_task({

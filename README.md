@@ -8,7 +8,7 @@ This toolkit is also intended to include some other shortcuts that may be freque
 
 Currently we only have an initial implementation and it is under development for optimizing file synchronization and extending functionalities.
 
-## Getting started
+## Installation
 
 The code is based on Python 3. To install it, run:
 
@@ -18,22 +18,37 @@ python setup.py install
 
 Or run `python setup.py develop` for development.
 
-For major functionalities, run:
+## Getting Started
 
-```bash
-lab CONFIG_FILE_PATH
-```
-
-where there needs to be a configuration JSON file at the `CONFIG_FILE_PATH` path.  The path is set to `config.json` by default. The configuration file contains several items where each corresponds to an integrated functionality. To initialize a configuration file with a guide, run:
+Initialize a configuration file:
 
 ```bash
 lab init
 ```
 
-## List of Functionalities
+Listen for local changes:
 
-See the [configuration format of the functionalities](https://github.com/shizhouxing/labsync/wiki/Configurations).
+```bash
+lab [-t] [CONFIG]
+```
+`-t` is optional for starting a Tensorboard server. `CONFIG` can be used to specify a configuration file. By default, it looks for a configuration file at `./.labsync-config.json` and `~/.labsync-config.json`. See the [format of configuration](https://github.com/shizhouxing/labsync/wiki/Configurations).
 
-* `WatchFS`: Watch for changes in the local file system and synchronize them to multiple remote servers.
+## Google Drive
 
-* `Tensorboard`: Start a Tensorboard server locally.
+There is a shortcut `lab gd` for uploading files to Google Drive based on `pydrive`. 
+To use it, first create a project on  [Google Cloud Console](https://console.cloud.google.com/), and obtain a credential JSON file (Project -> APIs and services -> Credentials). 
+For the first time to use this shortcut, you will be asked to copy and paste the content in the credential file to the console, and it will proceed to authentication using a web browser.
+
+Upload a file:
+
+```bash
+lab gd FILE_PATH
+```
+
+## Overleaf
+
+Use Git to pull and push changes to Overleaf: 
+
+```
+lab ol update
+```

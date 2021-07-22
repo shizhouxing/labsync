@@ -16,11 +16,12 @@ def get_global_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', type=str, default='listen', 
                         choices=['listen', 'tb', 'tb-update', 'init', 'get', 
-                                'put', 'task', 'overleaf', 'ol', 'gd'], 
+                                'put', 'task', 'overleaf', 'ol', 'google-drive', 'gd'], 
                         nargs='?', help='Command of this run')
     shortcuts = {
         'tb': 'tb-update',
-        'ol': 'overleaf'
+        'ol': 'overleaf',
+        'gd': 'google-drive'
     }
     return parser, shortcuts
     
@@ -41,7 +42,7 @@ def cli_main():
         task_manager_entry()
     elif args.command == 'overleaf':
         overleaf()
-    elif args.command == 'gd':
+    elif args.command == 'google-drive':
         google_drive()
 
 if __name__ == '__main__':

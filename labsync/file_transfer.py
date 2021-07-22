@@ -10,33 +10,32 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('method', type=str)
     parser.add_argument('server', type=str)
-    parser.add_argument('path_remote', type=str)
-    parser.add_argument('path_local', type=str)
+    parser.add_argument('path_src', type=str)
+    parser.add_argument('path_dest', type=str)
     return parser
 
-def get_remote_path(server, path):
+def get_scp_args(server):
     server = get_server(server)
-    scp_args = []
+    scp_args = ['scp']
     if 'jump' in server:
         scp_args += ['-J', server['jump']]
     if 'port' in server:
         scp_args += ['-P', str(server['port'])]
-    path = '{}@{}:{}'.format(server['username'], server['host'], path)
-    return scp_args, path
+    return server, scp_args
 
-def scp_file(method, server, path_remote, path_local, allow_directory=True):
-    scp_args, path_remote = get_remote_path(server, path_remote)
+def scp_file(method, server, path_src, path_dest, allow_directory=True):
+    server, scp_args = get_scp_args(server)
     if allow_directory:
         scp_args.append('-r')
-    scp_args = ['scp'] + scp_args
     if method == 'get':
-        scp_args += [path_remote, path_local]
+        scp_args += ['{}@{}:{}'.format(server['username'], server['host'], path_src), path_dest]
     elif method == 'put':
-        scp_args += [path_local, remote]
+        scp_args += [path_src, '{}@{}:{}'.format(server['username'], server['host'], path_dest)]
     else:
         raise NotImplementedError('Unknown method for scp_file: {}'.format(method))
+    print(scp_args)
     subprocess.run(scp_args)
 
 def file_transfer():
     args = get_parser().parse_args(sys.argv[1:])
-    scp_file(args.method, args.server, args.path_remote, args.path_local)
+    scp_file(args.method, args.server, args.path_src, args.path_dest)
