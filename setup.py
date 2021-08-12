@@ -12,7 +12,8 @@ setup(
       'flask>=1.1',
       'appdirs>=1.4',
       'oslo.concurrency>=4.2',  
-      'pydrive>=1.3'    
+      'pydrive>=1.3'  ,
+      'httplib2==0.15'  
     ],
     entry_points={
       'console_scripts': [

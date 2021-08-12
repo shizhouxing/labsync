@@ -18,7 +18,8 @@ client_config_file = os.path.join(user_data_dir, 'client_secrets.json')
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('file', type=str, help='File path')
+    parser.add_argument('-r', action='store_true')
+    parser.add_argument('files', type=str, nargs='+', help='File path')
     return parser
 
 def authenticate():
@@ -48,7 +49,13 @@ def authenticate():
         print('Authenticating...')
         gauth.LocalWebserverAuth()
     elif gauth.access_token_expired:
-        gauth.Refresh()
+        try:
+            gauth.Refresh()
+        except:
+            print('Not able to refresh token. Reauthenticating...')
+            gauth = GoogleAuth()
+            gauth.LoadClientConfigFile(client_config_file)
+            gauth.LocalWebserverAuth()
     else:
         gauth.Authorize()
     gauth.SaveCredentialsFile(credential_file)
@@ -61,8 +68,18 @@ def google_drive():
     gauth = authenticate()
     drive = GoogleDrive(gauth)
 
-    file = drive.CreateFile({'title': os.path.basename(args.file)})
-    file.SetContentFile(args.file)
-    file.Upload()
-
-    print(f'File {args.file} uploaded to Google Drive')
+    for file in args.files:
+        if os.path.isdir(file):
+            if not args.r:
+                print(f'Skipping directory {file}')
+                continue
+            print(f'Archiving directory {file}')
+            file_z = f'{file}.tgz'
+            os.system(f'tar -czvf {file_z} {file}')
+            path = file_z
+        else:
+            path = file
+        file = drive.CreateFile({'title': os.path.basename(path)})
+        file.SetContentFile(path)
+        file.Upload()
+        print(f'File {path} uploaded to Google Drive')

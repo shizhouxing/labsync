@@ -45,6 +45,8 @@ Upload a file:
 lab gd FILE_PATH
 ```
 
+Add `-r` to allow archiving directories to `.tgz` and upload them.
+
 ## Overleaf
 
 Use Git to pull and push changes to Overleaf: 
