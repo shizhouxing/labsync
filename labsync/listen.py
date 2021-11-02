@@ -20,12 +20,9 @@ def listen():
     config = get_config()
     logger.info('Config: {}'.format(config))
 
-    if not 'watchfs' in config:
-        raise ValueError('Missing `watchfs` item in the configuration file')
-    else:
-        task_watchfs = WatchFS(config)
-        task_watchfs.start()
-        logger.info('Start listening for local file changes')
+    task_watchfs = WatchFS(config)
+    task_watchfs.start()
+    logger.info('Start listening for local file changes')
 
     if args.tensorboard:
         task_tensorboard = Tensorboard()

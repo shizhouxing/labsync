@@ -9,6 +9,7 @@ patterns = [
     '*.bib',
     '*.bst',
     '*.sty',
+    '*.pdf',
     'images',
     'figures',
     'image',
@@ -30,7 +31,11 @@ def overleaf():
             stderr=subprocess.STDOUT)
         os.system('git status')
         os.system('git commit -m "local update"')
-        os.system('git pull origin master --rebase')
+        os.system('git pull origin master --no-edit')
         os.system('git push origin master')
+    elif args.command == 'compile':
+        raise NotImplementedError(args.command)
+    else:
+        raise ValueError(f'Unknown command {command}')
     
     # TODO resolve conflicts

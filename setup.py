@@ -1,12 +1,12 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='labsync',
-    version='0.1',
+    version='0.2',
     description='Toolkit for synchronizing works with university lab servers',
     author='Zhouxing Shi',
     author_email='zhouxingshichn@gmail.com',
-    packages=['labsync'],
+    packages=find_packages(),
     install_requires=[
       'watchdog>=0.10',
       'flask>=1.1',

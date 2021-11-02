@@ -5,7 +5,6 @@ import labsync.utils
 from labsync.listen import listen
 from labsync.tb_update import tb_update
 from labsync.init import init
-from labsync.file_transfer import file_transfer
 from labsync.taskmanager import task_manager_entry
 from labsync.overleaf import overleaf
 from labsync.google_drive import google_drive
@@ -34,8 +33,6 @@ def cli_main():
         listen()
     elif args.command == 'tb-update':
         tb_update()
-    elif args.command in ['get', 'put']:
-        file_transfer()
     elif args.command == 'init':
         init()
     elif args.command == 'task':

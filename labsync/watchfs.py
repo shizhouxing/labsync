@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def get_parser():
     parser = argparse.ArgumentParser(prog='lab listen')
-    parser.add_argument('--destination', '-d', type=str, default='~', help='Destination directory on the remote servers')
+    parser.add_argument('--path', '-p', type=str, default='~', help='Path of the working directory on remote servers')
     return parser
 
 class WatchFS(Thread):
@@ -22,18 +22,17 @@ class WatchFS(Thread):
         args, _ = get_parser().parse_known_args(sys.argv[min(len(sys.argv), 1):])
 
         path = '.'
-
         self.servers = []
         for server, conf in config['servers'].items():
             if conf.get('enable', True):
-                dest = conf.get('dest') or args.destination
-                self.servers.append(Server(server, conf, dest))
+                path_remote = conf.get('path') or config.get('path') or args.path
+                self.servers.append(Server(server, conf, path_remote))
 
         synchronizer = Synchronizer(self.servers, path)
         self.event_handler = FSEventHandler(
             synchronizer, 
-            patterns=config['watchfs'].get('patterns', None), 
-            ignore_patterns=config['watchfs'].get('ignore_patterns', None)
+            patterns=config.get('patterns', None), 
+            ignore_patterns=config.get('ignore_patterns', None)
         )
         self.observer = Observer()
         self.observer.schedule(self.event_handler, path, recursive=True)

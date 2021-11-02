@@ -1,6 +1,7 @@
 import logging
 import argparse
 import json
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -9,21 +10,19 @@ def get_parser():
     return parser
 
 config = {
-    "watchfs": {
-        "ignore_patterns": [
-            "*/.git/*",
-            "log",
-            "*/events.*",
-            "./tensorboard*/*",
-            "data",
-            "__pycache__",
-            ".DS_Store",
-            ".pytest_cache",
-            "results*",
-            "*.lp",
-            "*.pyc"                      
-        ]
-    },
+    "ignore_patterns": [
+        "*/.git/*",
+        "log",
+        "*/events.*",
+        "./tensorboard*/*",
+        "data",
+        "__pycache__",
+        ".DS_Store",
+        ".pytest_cache",
+        "results*",
+        "*.lp",
+        "*.pyc"                      
+    ],
     "servers": {}
 }
 
@@ -40,68 +39,35 @@ def get_bool(question, default=True):
         elif line in no:
             return False
 
-def get_str(question, default=''):
-    print(question, end='')
-    ans = input()
-    if ans == '':
-        ans = default
-    return ans
-
-def parse_ssh(command):
-    ssh = {}
-    args = command.split()
-    i = 0
-    while i < len(args):
-        if args[i] == '-p':
-            ssh['port'] = int(args[i + 1])
-        elif args[i] == '-J':
-            ssh['jump'] = args[i + 1]
-        else:
-            if i + 1 < len(args):
-                raise ValueError('Failed to parse {}'.format(' '.join(args[i:])))
-            ssh['username'] = args[i][:args[i].find('@')]
-            ssh['host'] = args[i][args[i].find('@')+1:]
-            return ssh
-        i += 2
-    return ssh
-
 def init():
-    print('This tool helps you to create a config.json file with common items.')
-    print('Use `lab` afterwards to start.')
+    print('This tool helps you to create a basic configuration file')
+    print('Use `lab` afterwards to start the main program.')
     print()
 
-    while True:
-        n = len(config['servers']) 
-
-        if n == 0:
-            add = get_bool('Add a server?', default=True)
-        else:
-            add = get_bool('Add one more server?', default=False)
-        if not add:
-            break
-            
-        ssh = get_str('SSH command: ssh ')
-        dest = get_str('Destination directory: ')
-        default_alias = 'Server{}'.format(n)
-        alias = get_str('Server alias (default: {}): '.format(default_alias), default=default_alias)
-
-        try:
-            config['servers'][alias] = parse_ssh(ssh)
-        except:
-            raise ValueError('Failed to parse SSH command: {}'.format(ssh))
-        config['servers'][alias]['dest'] = dest
-        config['servers'][alias]['enable'] = True
+    print('Please input the host of each server you want to use, separated by spaces.')
+    print('These servers should have been used previously, and exist in the SSH'
+        ' configuration file (typically ~/.ssh/config).')
+    hosts = []
+    for host in input('Hosts: ').split(' '):
+        host = host.strip()
+        if len(host) > 0:
+            hosts.append(host)
+    
+    print('Please specify the working directory on the remote server(s) (do not use "~"):')
+    config['path'] = input('Path: ')
+    for host in hosts:
+        config['servers'][host] = { 'enable': True }
 
     tb = get_bool('Use Tensorboard?', default=False)
     if tb:
-        port = get_str('Tensorboard port (default: 9000): ', default='9000')
-        logdir = get_str('Logdir (default: tensorboard): ', default='tensorboard')
+        port = input('Tensorboard port (default: 9000): ') or '9000'
+        logdir = get_str('Logdir (default: tensorboard): ') or 'tensorboard'
         config['tensorboard'] = {
             'port': port,
             'logdir': logdir
         }
     
-    path = '.labsync-config.json'
+    path = '.labsync.config.json'
     with open(path, 'w') as file:
         file.write(json.dumps(config, indent=4))
-    print('Configuration file saved to {}'.format(path))
+    print(f'Configuration saved to {path}')

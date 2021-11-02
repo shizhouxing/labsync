@@ -4,8 +4,8 @@ import argparse
 import os
 import time
 import shutil
+import subprocess
 from .utils import user_data_dir, get_config, get_server
-from .file_transfer import scp_file
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def update(args, ids):
             tmp = os.path.join(tmp_dir, id)
             if os.path.exists(tmp):
                 shutil.rmtree(tmp)
-            scp_file('get', args.server, path_remote, tmp)
+            subprocess.run(['ssh', f'{args.server}:{path_remote}', tmp])
             shutil.copytree(tmp, id, dirs_exist_ok=True)
 
 def tb_update():

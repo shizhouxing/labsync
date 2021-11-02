@@ -9,14 +9,10 @@ from threading import Thread, Lock
 logger = logging.getLogger(__name__)
 
 class Server(Thread):
-    def __init__(self, name, config, destination, refresh_interval=0.05):
+    def __init__(self, name, config, path, refresh_interval=0.05):
         super().__init__()
         self.name = name
-        self.username = config['username']
-        self.host = config['host']
-        self.jump = config.get('jump', None)
-        self.port = config.get('port', 22)
-        self.dest_root = destination
+        self.path_root = path
         self.refresh_interval = refresh_interval
         self.tasks = deque()
         self.lock = Lock()
@@ -40,7 +36,6 @@ class Server(Thread):
                 self.lock.acquire()
                 task = self.tasks.pop()
                 self.lock.release()
-
                 if task['action'] == 'upload':
                     self._upload(task['path'])
                 elif task['action'] == 'mkdir':
@@ -54,21 +49,18 @@ class Server(Thread):
 
             time.sleep(self.refresh_interval)
 
+    def _get_remote_path(self, path):
+        return os.path.join(self.path_root, path)
+
     def _upload(self, path):
-        args = []
-        if self.jump: 
-            args += ['-J', self.jump]
-        if self.port:
-            args += ['-P', str(self.port)]
-        args.append(path)
-        args.append('{}@{}:{}'.format(
-            self.username, self.host, os.path.join(self.dest_root, path)))
-        logger.info('Server {}: executing scp {}'.format(self.name, args))
-        subprocess.run(['scp'] + args)
+        logger.info(f'Server {self.name}: uploading {path}')
+        path = self._get_remote_path(path)
+        subprocess.run(['scp', path, f'{self.name}:{path}'])
 
     def _mkdir(self, path):
-        print('TODO mkdir', path)
-        #raise NotImplementedError
+        logger.info(f'Server {self.name}: mkdir {path}')
+        path = self._get_remote_path(path)
+        subprocess.run(['ssh', f'{self.name}', f'mkdir {self._get_remote_path(path)}'])
 
     def _mv(self, src_path, dest_path):
         print('TODO mv', src_path, dest_path)
