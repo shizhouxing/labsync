@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='labsync',
-    version='0.1.2',
+    version='0.2',
     description='Toolkit for synchronizing works with remote servers',
     author='Zhouxing Shi',
     author_email='zhouxingshichn@gmail.com',
