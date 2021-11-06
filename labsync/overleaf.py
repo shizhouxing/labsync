@@ -3,19 +3,7 @@ import logging
 import argparse
 import os
 import subprocess
-
-patterns = [
-    '*.tex',
-    '*.bib',
-    '*.bst',
-    '*.sty',
-    '*.pdf',
-    'images',
-    'figures',
-    'image',
-    'figure',
-    'img'
-]
+from .utils import get_config
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -24,6 +12,8 @@ def get_parser():
 
 def overleaf():
     args = get_parser().parse_args(sys.argv[2:])
+    config = get_config()['overleaf']
+    patterns = config['patterns']
     if args.command == 'update':
         for p in patterns:
             subprocess.run(['git', 'add', p],     

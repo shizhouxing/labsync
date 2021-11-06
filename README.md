@@ -2,36 +2,38 @@
 
 This is a toolkit for development on university lab servers. 
 The major functionality is to watch local file changes and synchronize them to multiple remote servers.
-This toolkit is also intended to include some other shortcuts that may be frequently used, such as synchronizing Tensorboard logs.
+It is also intended to include some other shortcuts that may be frequently used
+while working with remote servers, such as synchronizing Tensorboard logs, 
+or uploading files to Google Drive.
 
 ## Installation
 
-The code is based on Python 3. To install it, run:
-
+The program is based on Python 3 (3.7+ is recommended). To install it, run:
 ```bash
 python setup.py install
 ```
-
 Or run `python setup.py develop` for development.
 
-## Getting Started
-
-Initialize a configuration file:
-
+Initialize a configuration file by inputing server information:
 ```bash
 lab init
 ```
+The configuration file will be stored at `~/.labsync.config.json`.
+See the format of the [configuration file](https://github.com/shizhouxing/labsync/wiki/Configuration-file).
 
-Listen for local changes:
+## Synchronizing Local Changes
 
+Listen for local changes to be synchronized to all the remote servers:
 ```bash
 lab [-t] [CONFIG]
 ```
-`-t` is optional for starting a Tensorboard server. `CONFIG` can be used to specify a configuration file. By default, it looks for a configuration file at `./.labsync-config.json` and `~/.labsync-config.json`. See the [format of configuration](https://github.com/shizhouxing/labsync/wiki/Configurations) (*to be updated*).
+`-t` is optional for starting a Tensorboard server locally. 
+`CONFIG` is also optional and can be used to specify an alternative configuration file. 
 
 ## Google Drive
 
-There is a shortcut `lab gd` for directly uploading files to Google Drive from lab servers based on the `pydrive` library. 
+Shortcut `lab gd` can be used for directly uploading files (such as large checkpoint files)
+from servers to Google Drive. This is based on the `pydrive` library. 
 
 ### Setup
 
@@ -52,12 +54,13 @@ lab gd PATH
 ```bash
 lab gd -r PATH
 ```
-
 This will archive the directory and upload the archive.
 
 ## Overleaf
 
-Use Git to pull remote changes and push local changes to Overleaf: 
+If you sometimes want to write in a local editor while also use Overleaf to store or share the document, 
+you may use the following shortcut to pull remote changes 
+and push local changes to Overleaf via Git.
 
 ```
 lab ol update

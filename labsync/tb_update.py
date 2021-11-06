@@ -5,7 +5,7 @@ import os
 import time
 import shutil
 import subprocess
-from .utils import user_data_dir, get_config, get_server
+from .utils import user_data_dir, get_server
 
 logger = logging.getLogger(__name__)
 

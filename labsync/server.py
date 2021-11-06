@@ -54,8 +54,7 @@ class Server(Thread):
 
     def _upload(self, path):
         logger.info(f'Server {self.name}: uploading {path}')
-        path = self._get_remote_path(path)
-        subprocess.run(['scp', path, f'{self.name}:{path}'])
+        subprocess.run(['scp', path, f'{self.name}:{self._get_remote_path(path)}'])
 
     def _mkdir(self, path):
         logger.info(f'Server {self.name}: mkdir {path}')

@@ -10,20 +10,31 @@ def get_parser():
     return parser
 
 config = {
+    "servers": {},
     "ignore_patterns": [
-        "*/.git/*",
-        "log",
-        "*/events.*",
-        "./tensorboard*/*",
-        "data",
         "__pycache__",
         ".DS_Store",
         ".pytest_cache",
-        "results*",
-        "*.lp",
         "*.pyc"                      
     ],
-    "servers": {}
+    "tensorboard": {
+        "port": 9000,
+        "logdir": "tensorboard"
+    },    
+    "overleaf": {
+        "patterns": [
+            "*.tex",
+            "*.bib",
+            "*.bst",
+            "*.sty",
+            "*.pdf",
+            "images",
+            "figures",
+            "image",
+            "figure",
+            "img"
+        ]
+    }    
 }
 
 def get_bool(question, default=True):
