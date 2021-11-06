@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='labsync',
     version='0.2',
-    description='Toolkit for synchronizing works with university lab servers',
+    description='Toolkit for synchronizing works with remote servers',
     author='Zhouxing Shi',
     author_email='zhouxingshichn@gmail.com',
     packages=find_packages(),
@@ -22,6 +22,6 @@ setup(
           'lab = labsync.main:cli_main'
       ],
     },    
-    platforms=['any'],
-    license='BSD',
+    python_requires=">=3.7",
+    license='GNU GPL v3',    
 )
