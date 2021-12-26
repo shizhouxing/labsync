@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import logging
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def get_parser():
     parser = argparse.ArgumentParser(prog='lab listen')
-    parser.add_argument('--path', '-p', type=str, default='~', help='Path of the working directory on remote servers')
+    parser.add_argument('--path', '-p', type=str, default=None, help='Path of the working directory on remote servers')
     return parser
 
 class WatchFS(Thread):
@@ -25,7 +26,9 @@ class WatchFS(Thread):
         self.servers = []
         for server, conf in config['servers'].items():
             if conf.get('enable', True):
-                path_remote = conf.get('path') or config.get('path') or args.path
+                path_remote = conf.get('path') or config.get('path')
+                if args.path:
+                    path_remote = os.path.join(path_remote, args.path)
                 self.servers.append(Server(server, conf, path_remote))
 
         synchronizer = Synchronizer(self.servers, path)

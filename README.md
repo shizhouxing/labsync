@@ -25,10 +25,12 @@ See the format of the [configuration file](https://github.com/shizhouxing/labsyn
 
 Listen for local changes to be synchronized to all the remote servers:
 ```bash
-lab [-t] [CONFIG]
+lab [-t] [CONFIG] [-p PATH]
 ```
 `-t` is optional for starting a Tensorboard server locally. 
 `CONFIG` is also optional and can be used to specify an alternative configuration file. 
+`-p PATH` is optional for specifying the working directory on remote servers relative
+to the default path of the server.
 
 ## Google Drive
 

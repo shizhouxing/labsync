@@ -15,8 +15,10 @@ setup(
       'pydrive>=1.3',
       'httplib2==0.15',
       'google-api-core>=2.2.2',
-      'google-auth>=2.3.3'
+      'google-auth>=2.3.3',
+      'google-api-python-client>=2.29.0'
     ],
+    url='https://github.com/shizhouxing/labsync',
     entry_points={
       'console_scripts': [
           'lab = labsync.main:cli_main'

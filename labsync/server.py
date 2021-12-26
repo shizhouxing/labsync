@@ -16,6 +16,7 @@ class Server(Thread):
         self.refresh_interval = refresh_interval
         self.tasks = deque()
         self.lock = Lock()
+        logger.info(f'Server {self.name}, root {self.path_root}')
 
     def add_task(self, task):
         self.lock.acquire()
