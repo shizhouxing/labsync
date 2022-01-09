@@ -5,6 +5,7 @@ import logging
 import subprocess
 from collections import deque
 from threading import Thread, Lock
+from subprocess import CalledProcessError
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,15 @@ class Server(Thread):
 
     def _upload(self, path):
         logger.info(f'Server {self.name}: uploading {path}')
-        subprocess.run(['scp', path, f'{self.name}:{self._get_remote_path(path)}'])
+        remote_path = self._get_remote_path(path)
+        args_scp = ['scp', path, f'{self.name}:{remote_path}']
+        try:
+            output = subprocess.check_output(args_scp, stderr=subprocess.STDOUT)
+        except CalledProcessError as err:
+            if 'No such file or directory' in err.output.decode():
+                # Create the missing directory and retry
+                self._mkdir(os.path.dirname(path))
+                subprocess.run(args_scp, stderr=subprocess.STDOUT)                
 
     def _mkdir(self, path):
         logger.info(f'Server {self.name}: mkdir {path}')
