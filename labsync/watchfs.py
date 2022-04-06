@@ -35,7 +35,8 @@ class WatchFS(Thread):
         self.event_handler = FSEventHandler(
             synchronizer, 
             patterns=config.get('patterns', None), 
-            ignore_patterns=config.get('ignore_patterns', None)
+            ignore_patterns=config.get('ignore_patterns', None),
+            ignore_patterns_re=config.get('ignore_patterns_re', []),
         )
         self.observer = Observer()
         self.observer.schedule(self.event_handler, path, recursive=True)

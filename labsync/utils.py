@@ -4,7 +4,7 @@ import os
 import json
 
 logging.basicConfig(
-    format='%(levelname)-6s %(asctime)-10s %(message)s',
+    format='%(asctime)-10s %(message)s',
     datefmt='%H:%M:%S',
     level=logging.INFO
 )
