@@ -69,6 +69,8 @@ def google_drive():
     drive = GoogleDrive(gauth)
 
     for file in args.files:
+        if file.endswith('/'):
+            file = file[:-1]
         if os.path.isdir(file):
             if not args.r:
                 print(f'Skipping directory {file}')
