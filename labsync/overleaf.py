@@ -7,7 +7,7 @@ from .utils import get_config
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', type=str, choices=['update'])
+    parser.add_argument('command', type=str, choices=['update', 'clean'])
     return parser
 
 def overleaf():
@@ -23,6 +23,9 @@ def overleaf():
         os.system('git commit -m "local update"')
         os.system('git pull origin master --no-edit')
         os.system('git push origin master')
+    elif args.command == 'clean':
+        os.system('rm -f *.log *.aux *.out *.bbl')
+        print('Cleaned temporary files by Tex')
     elif args.command == 'compile':
         raise NotImplementedError(args.command)
     else:
