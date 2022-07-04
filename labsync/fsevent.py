@@ -4,6 +4,7 @@ from watchdog.events import (FileSystemEventHandler, PatternMatchingEventHandler
                             EVENT_TYPE_CREATED, EVENT_TYPE_DELETED, EVENT_TYPE_MODIFIED, EVENT_TYPE_MOVED)
 from fnmatch import fnmatch
 
+
 class FSEventHandler(PatternMatchingEventHandler):
     def __init__(self, synchronizer, patterns=None, ignore_patterns=None, 
                 ignore_patterns_re=[]):

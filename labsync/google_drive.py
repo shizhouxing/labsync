@@ -8,6 +8,7 @@ from .utils import user_data_dir
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
+
 # silence error message "file_cache is only supported with oauth2client<4.0.0"
 for name in logging.root.manager.loggerDict:
     if 'google' in name:
@@ -16,11 +17,13 @@ for name in logging.root.manager.loggerDict:
 credential_file = os.path.join(user_data_dir, 'google_drive_credential.txt')
 client_config_file = os.path.join(user_data_dir, 'client_secrets.json')
 
+
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', action='store_true')
     parser.add_argument('files', type=str, nargs='+', help='File path')
     return parser
+
 
 def authenticate():
     gauth = GoogleAuth()
@@ -61,8 +64,9 @@ def authenticate():
     gauth.SaveCredentialsFile(credential_file)
     return gauth
 
-"""Currently only simple uploading is supported"""
+
 def google_drive():
+    """Currently only simple uploading is supported"""
     args = get_parser().parse_args(sys.argv[2:])
 
     gauth = authenticate()
@@ -76,8 +80,8 @@ def google_drive():
                 print(f'Skipping directory {file}')
                 continue
             print(f'Archiving directory {file}')
-            file_z = f'{file}.tgz'
-            os.system(f'tar -czvf {file_z} {file}')
+            file_z = f'/tmp/{os.path.basename(file)}.tgz'
+            os.system(f'cd {file} && tar -czvf {file_z} *')
             path = file_z
         else:
             path = file
