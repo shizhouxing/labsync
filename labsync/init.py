@@ -50,6 +50,13 @@ def get_bool(question, default=True):
         elif line in no:
             return False
 
+def get_str(question, default=''):
+    print(question, end='')
+    ans = input()
+    if ans == '':
+        ans = default
+    return ans
+
 def init():
     print('This tool helps you to create a basic configuration file')
     print('Use `lab` afterwards to start the main program.')
@@ -65,7 +72,7 @@ def init():
             hosts.append(host)
     
     print('Please specify the working directory on the remote server(s) (do not use "~"):')
-    config['path'] = input('Path: ')
+    config['remote_path'] = input('Path: ')
     for host in hosts:
         config['servers'][host] = { 'enable': True }
 

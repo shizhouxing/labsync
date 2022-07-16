@@ -1,7 +1,7 @@
 import os
 
 class Synchronizer:
-    def __init__(self, servers, local_root):
+    def __init__(self, servers):
         self.servers = servers
         for server in self.servers:
             if not server.is_alive():

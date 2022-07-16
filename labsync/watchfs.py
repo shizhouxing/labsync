@@ -26,12 +26,12 @@ class WatchFS(Thread):
         self.servers = []
         for server, conf in config['servers'].items():
             if conf.get('enable', True):
-                path_remote = conf.get('path') or config.get('path')
+                path_remote = conf.get('remote_path') or config.get('remote_path')
                 if args.path:
                     path_remote = os.path.join(path_remote, args.path)
                 self.servers.append(Server(server, conf, path_remote))
 
-        synchronizer = Synchronizer(self.servers, path)
+        synchronizer = Synchronizer(self.servers)
         self.event_handler = FSEventHandler(
             synchronizer, 
             patterns=config.get('patterns', None), 

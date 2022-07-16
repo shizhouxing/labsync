@@ -1,5 +1,4 @@
 import sys
-import logging
 import argparse
 import os
 import subprocess
@@ -14,7 +13,8 @@ def overleaf():
     args = get_parser().parse_args(sys.argv[2:])
     config = get_config()['overleaf']
     patterns = config['patterns']
-    if args.command == 'update':
+    command = args.command
+    if command == 'update':
         for p in patterns:
             subprocess.run(['git', 'add', p],     
             stdout=subprocess.DEVNULL, 
@@ -23,11 +23,11 @@ def overleaf():
         os.system('git commit -m "local update"')
         os.system('git pull origin master --no-edit')
         os.system('git push origin master')
-    elif args.command == 'clean':
+    elif command == 'clean':
         os.system('rm -f *.log *.aux *.out *.bbl')
         print('Cleaned temporary files by Tex')
-    elif args.command == 'compile':
-        raise NotImplementedError(args.command)
+    elif command == 'compile':
+        raise NotImplementedError(command)
     else:
         raise ValueError(f'Unknown command {command}')
     
