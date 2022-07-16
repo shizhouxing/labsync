@@ -20,6 +20,11 @@ def listen():
     config = get_config()
     logger.info('Config: {}'.format(config))
 
+    if 'local_path' in config:
+        working_dir = os.path.expanduser(config['local_path'])
+        os.chdir(working_dir)
+        logger.info(f'Local working directory: {working_dir}')
+
     task_watchfs = WatchFS(config)
     task_watchfs.start()
     logger.info('Start listening for local file changes')
