@@ -33,32 +33,35 @@ class Server(Thread):
 
     def run(self):
         while True:
-            while len(self.tasks) > 0:
-                self.lock.acquire()
-                task = self.tasks.pop(0)
-                if task['action'] == 'upload':
-                    files = [task['path']]
-                    tasks_left = []
-                    for t in self.tasks:
-                        if t['action'] == 'upload' and dirname(t['path']) == dirname(task['path']):
-                            # In the same directory. Merge it to one scp.
-                            files.append(t['path'])
-                        else:
-                            tasks_left.append(t)
-                    self.tasks = tasks_left
-                self.lock.release()
-                if task['action'] == 'upload':
-                    self._upload(files)
-                elif task['action'] == 'mkdir':
-                    self._mkdir(task['path'])
-                elif task['action'] == 'mv':
-                    self._mv(task['src_path'], task['dest_path'])
-                else:
-                    raise ValueError('Unknown action {}'.format(task['action']))
+            self._check_tasks()
 
-                logger.info(f'{self.name}: {len(self.tasks)} task(s) left')
+    def _check_tasks(self):
+        while len(self.tasks) > 0:
+            self.lock.acquire()
+            task = self.tasks.pop(0)
+            if task['action'] == 'upload':
+                files = [task['path']]
+                tasks_left = []
+                for t in self.tasks:
+                    if t['action'] == 'upload' and dirname(t['path']) == dirname(task['path']):
+                        # In the same directory. Merge it to one scp.
+                        files.append(t['path'])
+                    else:
+                        tasks_left.append(t)
+                self.tasks = tasks_left
+            self.lock.release()
+            if task['action'] == 'upload':
+                self._upload(files)
+            elif task['action'] == 'mkdir':
+                self._mkdir(task['path'])
+            elif task['action'] == 'mv':
+                self._mv(task['src_path'], task['dest_path'])
+            else:
+                raise ValueError('Unknown action {}'.format(task['action']))
 
-            time.sleep(self.refresh_interval)
+            logger.info(f'{self.name}: {len(self.tasks)} task(s) left')
+
+        time.sleep(self.refresh_interval)
 
     def _get_remote_path(self, path):
         return os.path.join(self.path_root, path)

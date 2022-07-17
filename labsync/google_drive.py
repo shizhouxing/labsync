@@ -89,3 +89,5 @@ def google_drive():
         file.SetContentFile(path)
         file.Upload()
         print(f'File {path} uploaded to Google Drive')
+        if path.startswith('/tmp/'):
+            os.system('rm {path}')

@@ -43,12 +43,26 @@ class WatchFS(Thread):
 
     def run(self):
         self.observer.start()
+        time.sleep(5)
         try:
             while True:
                 time.sleep(10)
+                self._check_tasks()
         except KeyboardInterrupt:
             self.observer.stop()
         self.observer.join()
+
+    def _check_tasks(self):
+        for server in self.servers:
+            server.lock.acquire()
+        count_tasks = 0
+        for server in self.servers:
+            count_tasks += len(server.tasks)
+        if count_tasks == 0:
+            os.system('clear')
+            logger.info('Up-to-date')
+        for server in self.servers:
+            server.lock.release()
 
     def pause(self):
         self.event_handler.pause()
