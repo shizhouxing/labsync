@@ -80,7 +80,7 @@ def google_drive():
                 print(f'Skipping directory {file}')
                 continue
             print(f'Archiving directory {file}')
-            file_z = f'{os.path.basename(file)}.tgz'
+            file_z = os.path.abspath(f'{os.path.basename(file)}.tgz')
             os.system(f'cd {file} && tar -czvf {file_z} *')
             path = file_z
         else:
