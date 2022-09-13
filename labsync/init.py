@@ -1,7 +1,6 @@
 import logging
 import argparse
 import json
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +14,12 @@ config = {
         "__pycache__",
         ".DS_Store",
         ".pytest_cache",
-        "*.pyc"                      
+        "*.pyc"
     ],
     "tensorboard": {
         "port": 9000,
         "logdir": "tensorboard"
-    },    
+    },
     "overleaf": {
         "patterns": [
             "*.tex",
@@ -34,7 +33,7 @@ config = {
             "figure",
             "img"
         ]
-    }    
+    }
 }
 
 def get_bool(question, default=True):
@@ -70,7 +69,7 @@ def init():
         host = host.strip()
         if len(host) > 0:
             hosts.append(host)
-    
+
     print('Please specify the working directory on the remote server(s) (do not use "~"):')
     config['remote_path'] = input('Path: ')
     for host in hosts:
@@ -84,7 +83,7 @@ def init():
             'port': port,
             'logdir': logdir
         }
-    
+
     path = '.labsync.config.json'
     with open(path, 'w') as file:
         file.write(json.dumps(config, indent=4))

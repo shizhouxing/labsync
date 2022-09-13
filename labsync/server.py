@@ -1,6 +1,5 @@
 import os
 import time
-import threading
 import logging
 import subprocess
 from os.path import dirname
@@ -77,7 +76,7 @@ class Server(Thread):
             if 'No such file or directory' in err.output.decode():
                 # Create the missing directory and retry
                 self._mkdir(dn)
-                subprocess.run(args_scp, stderr=subprocess.STDOUT)                
+                subprocess.run(args_scp, stderr=subprocess.STDOUT)
 
     def _mkdir(self, path):
         logger.info(f'{self.name}: mkdir {path}')

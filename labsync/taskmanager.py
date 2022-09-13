@@ -1,6 +1,4 @@
-"""
-Task manager for managing experiment tasks. 
-"""
+"""Task manager for managing experiment tasks."""
 
 import sys
 import time
@@ -9,10 +7,9 @@ import os
 import subprocess
 import argparse
 from threading import Thread
-from oslo_concurrency import lockutils, processutils
+from oslo_concurrency import lockutils
 from oslo_concurrency.lockutils import synchronized
 from .utils import user_data_dir
-from shutil import copyfile
 
 logger = logging.getLogger(__name__)
 lockutils.set_defaults(os.path.join(user_data_dir, 'task.lock'))
@@ -20,7 +17,7 @@ lockutils.set_defaults(os.path.join(user_data_dir, 'task.lock'))
 def get_parser():
     parser = argparse.ArgumentParser(prog='lab task')
     parser.add_argument('type', type=str, choices=['listen', 'new'])
-    parser.add_argument('--time-recycle', type=int, default=60, 
+    parser.add_argument('--time-recycle', type=int, default=60,
                         help='Time interval to recycle a previously allocated GPU, \
                         to avoid consecutively allocating two tasks to a same \
                         device while the first one is still starting')
@@ -32,21 +29,21 @@ class TaskManager(Thread):
         self._init_db()
         self.time_recycle = args.time_recycle
         self.device_last_used = {}
-    
+
     def _init_db(self):
         self.dir_tasks = os.path.join(user_data_dir, 'task')
         self.file_count = os.path.join(self.dir_tasks, 'count')
         self.dir_pending = os.path.join(self.dir_tasks, 'pending')
         self.dir_running = os.path.join(self.dir_tasks, 'running')
         if not os.path.exists(self.dir_tasks):
-            os.makedirs(self.dir_tasks)  
+            os.makedirs(self.dir_tasks)
             os.makedirs(self.dir_pending)
             os.makedirs(self.dir_running)
             self._set_current_id(0)
 
     def _find_device(self, n_gpus=1, memory=12000):
         stat = subprocess.run(
-            ['nvidia-smi', '--query-gpu=memory.free,utilization.gpu', '--format=csv'], 
+            ['nvidia-smi', '--query-gpu=memory.free,utilization.gpu', '--format=csv'],
             stdout=subprocess.PIPE).stdout.decode().split('\n')[1:-1]
         gpus = []
         for i in range(len(stat)):
@@ -110,13 +107,13 @@ class TaskManager(Thread):
             ['bash', path], env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.STDOUT)
-        self.device_last_used[device] = time.time()            
+        self.device_last_used[device] = time.time()
 
     def run(self):
         # TODO Currently, we always use one full GPU for each task
         logger.info('Task Manager listening')
         while True:
-            devices = self._find_device(memory=11000) 
+            devices = self._find_device(memory=11000)
             if len(devices) > 0:
                 self._run_task(devices[0])
             else:
@@ -124,7 +121,7 @@ class TaskManager(Thread):
 
 
 def task_manager_entry():
-    args = get_parser().parse_args(sys.argv[2:])  
+    args = get_parser().parse_args(sys.argv[2:])
     task_manager = TaskManager(args, {})
     if args.type == 'listen':
         task_manager.run()

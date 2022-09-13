@@ -1,6 +1,4 @@
-"""
-Template for creating new functionalities
-"""
+"""Template for creating new functionalities."""
 
 import logging
 import argparse

@@ -2,7 +2,6 @@ import sys
 import logging
 import argparse
 import os
-import json
 from .utils import get_config
 from .watchfs import WatchFS
 from .tensorboard import Tensorboard
