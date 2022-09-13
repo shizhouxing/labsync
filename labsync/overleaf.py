@@ -18,7 +18,7 @@ def overleaf():
         for p in patterns:
             subprocess.run(['git', 'add', p],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT, check=True)
+            stderr=subprocess.STDOUT, check=False)
         os.system('git status')
         os.system('git commit -m "local update"')
         os.system('git pull origin master --no-edit')

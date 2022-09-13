@@ -6,6 +6,7 @@ from labsync.init import init
 from labsync.taskmanager import task_manager_entry
 from labsync.overleaf import overleaf
 from labsync.google_drive import google_drive
+from labsync.indent import indent
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ def get_global_parser():
     parser.add_argument('command', type=str, default='listen',
                         choices=['listen', 'tb', 'tb-update', 'init', 'get',
                                 'put', 'task', 'overleaf', 'ol', 'google-drive',
-                                'gd'],
+                                'gd', 'indent'],
                         nargs='?', help='Command of this run')
     shortcuts = {
         'tb': 'tb-update',
@@ -40,6 +41,8 @@ def cli_main():
         overleaf()
     elif args.command == 'google-drive':
         google_drive()
+    elif args.command == 'indent':
+        indent()
 
 if __name__ == '__main__':
     cli_main()
