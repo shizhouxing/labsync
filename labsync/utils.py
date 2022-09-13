@@ -16,11 +16,11 @@ if not os.path.exists(user_data_dir):
 def get_config():
     for path in [
             '.labsync.config.json'
-            '.labsync-config.json', 
-            '.labkit-config.json', 
-            os.path.join(os.path.expanduser("~"), '.labsync.config.json'),
-            os.path.join(os.path.expanduser("~"), '.labsync-config.json'),
-            os.path.join(os.path.expanduser("~"), '.labkit-config.json')]:
+            '.labsync-config.json',
+            '.labkit-config.json',
+            os.path.join(os.path.expanduser('~'), '.labsync.config.json'),
+            os.path.join(os.path.expanduser('~'), '.labsync-config.json'),
+            os.path.join(os.path.expanduser('~'), '.labkit-config.json')]:
         if os.path.exists(path):
             with open(path) as file:
                 config = json.load(file)
@@ -30,5 +30,5 @@ def get_config():
 def get_server(server):
     config = get_config()
     if not server in config['servers']:
-        raise ValueError('Unknown server {}'.format(server))
+        raise ValueError(f'Unknown server {server}')
     return config['servers'][server]

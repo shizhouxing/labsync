@@ -3,7 +3,6 @@ import logging
 import argparse
 import os
 import json
-import logging
 from .utils import user_data_dir
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -29,7 +28,8 @@ def authenticate():
     gauth = GoogleAuth()
     if not os.path.exists(client_config_file):
         print(f'Client config file {client_config_file} does not exist')
-        print('Please get a new one from Google Cloud Console (https://console.cloud.google.com/)')
+        print('Please get a new one from Google Cloud Console ',
+              '(https://console.cloud.google.com/)')
         print('Project -> APIs and services -> Credentials')
         config = input('Copy and paste the configuration: ')
         try:
@@ -37,16 +37,17 @@ def authenticate():
             assert 'installed' in config_json
             installed = config_json['installed']
             for key in ['client_id', 'project_id', 'auth_uri', 'token_uri',
-                        'auth_provider_x509_cert_url', 'client_secret', 'redirect_uris']:
+                        'auth_provider_x509_cert_url', 'client_secret',
+                        'redirect_uris']:
                 assert key in installed
-        except:
+        except: # pylint: disable=bare-except
             print('Invalid. Please check it again.')
             exit(0)
         print('Verified')
         with open(client_config_file, 'w') as file:
             file.write(config)
         print(f'Saved client config file to {client_config_file}')
-    gauth.LoadClientConfigFile(client_config_file)      
+    gauth.LoadClientConfigFile(client_config_file)
     gauth.LoadCredentialsFile(credential_file)
     if gauth.credentials is None:
         print('Authenticating...')
@@ -54,7 +55,7 @@ def authenticate():
     elif gauth.access_token_expired:
         try:
             gauth.Refresh()
-        except:
+        except: # pylint: disable=bare-except
             print('Not able to refresh token. Reauthenticating...')
             gauth = GoogleAuth()
             gauth.LoadClientConfigFile(client_config_file)

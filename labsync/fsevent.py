@@ -8,12 +8,15 @@ from watchdog.events import FileModifiedEvent
 
 class FSEventHandler(PatternMatchingEventHandler):
     def __init__(self, synchronizer, patterns=None, ignore_patterns=None,
-                ignore_patterns_re=[]):
+                ignore_patterns_re=None):
         super().__init__(patterns, ignore_patterns)
         self.synchronizer = synchronizer
         self.paused = False
-        self.ignore_patterns_re = [
-            re.compile(pattern) for pattern in ignore_patterns_re]
+        if ignore_patterns_re is None:
+            self.ignore_patterns_re = []
+        else:
+            self.ignore_patterns_re = [
+                re.compile(pattern) for pattern in ignore_patterns_re]
 
     def dispatch(self, event):
         if self.paused:
@@ -41,7 +44,8 @@ class FSEventHandler(PatternMatchingEventHandler):
 
     def on_modified(self, event):
         if isinstance(event, DirModifiedEvent):
-            # Handle specific files in the directory, but not the directory itself
+            # Handle specific files in the directory,
+            # but not the directory itself
             pass
         elif isinstance(event, FileModifiedEvent):
             self.synchronizer.upload(event.src_path)

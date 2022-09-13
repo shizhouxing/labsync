@@ -9,29 +9,29 @@ def get_parser():
     return parser
 
 config = {
-    "servers": {},
-    "ignore_patterns": [
-        "__pycache__",
-        ".DS_Store",
-        ".pytest_cache",
-        "*.pyc"
+    'servers': {},
+    'ignore_patterns': [
+        '__pycache__',
+        '.DS_Store',
+        '.pytest_cache',
+        '*.pyc'
     ],
-    "tensorboard": {
-        "port": 9000,
-        "logdir": "tensorboard"
+    'tensorboard': {
+        'port': 9000,
+        'logdir': 'tensorboard'
     },
-    "overleaf": {
-        "patterns": [
-            "*.tex",
-            "*.bib",
-            "*.bst",
-            "*.sty",
-            "*.pdf",
-            "images",
-            "figures",
-            "image",
-            "figure",
-            "img"
+    'overleaf': {
+        'patterns': [
+            '*.tex',
+            '*.bib',
+            '*.bst',
+            '*.sty',
+            '*.pdf',
+            'images',
+            'figures',
+            'image',
+            'figure',
+            'img'
         ]
     }
 }
@@ -40,7 +40,8 @@ def get_bool(question, default=True):
     yes = {'yes', 'y'}
     no = {'no', 'n'}
     while True:
-        print('{} ({})'.format(question, 'yes' if default else 'no'), end=' ')
+        default_choice = 'yes' if default else 'no'
+        print(f'{question} ({default_choice})', end=' ')
         line = input().lower()
         if line == '':
             return default
@@ -61,7 +62,8 @@ def init():
     print('Use `lab` afterwards to start the main program.')
     print()
 
-    print('Please input the host of each server you want to use, separated by spaces.')
+    print('Please input the host of each server you want to use,',
+          'separated by spaces.')
     print('These servers should have been used previously, and exist in the SSH'
         ' configuration file (typically ~/.ssh/config).')
     hosts = []
@@ -70,7 +72,8 @@ def init():
         if len(host) > 0:
             hosts.append(host)
 
-    print('Please specify the working directory on the remote server(s) (do not use "~"):')
+    print('Please specify the working directory on the remote server(s)',
+          '(do not use "~"):')
     config['remote_path'] = input('Path: ')
     for host in hosts:
         config['servers'][host] = { 'enable': True }

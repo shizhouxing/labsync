@@ -16,9 +16,9 @@ def overleaf():
     command = args.command
     if command == 'update':
         for p in patterns:
-            subprocess.run(['git', 'add', p],     
-            stdout=subprocess.DEVNULL, 
-            stderr=subprocess.STDOUT)
+            subprocess.run(['git', 'add', p],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT, check=True)
         os.system('git status')
         os.system('git commit -m "local update"')
         os.system('git pull origin master --no-edit')
@@ -30,5 +30,5 @@ def overleaf():
         raise NotImplementedError(command)
     else:
         raise ValueError(f'Unknown command {command}')
-    
+
     # TODO resolve conflicts

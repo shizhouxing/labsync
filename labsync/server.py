@@ -9,14 +9,14 @@ from subprocess import CalledProcessError
 logger = logging.getLogger(__name__)
 
 class Server(Thread):
-    def __init__(self, name, config, path, refresh_interval=0.05):
+    def __init__(self, name, path, refresh_interval=0.05):
         super().__init__()
         self.name = name
         self.path_root = path
         self.refresh_interval = refresh_interval
         self.tasks = []
         self.lock = Lock()
-        logger.info(f'Server {self.name}, root {self.path_root}')
+        logger.info('Server %s, root %s', self.name, self.path_root)
 
     def add_task(self, task):
         self.lock.acquire()
@@ -27,7 +27,7 @@ class Server(Thread):
                 break
         if not existing:
             self.tasks.append(task)
-            logger.info(f'{self.name}: {task}')
+            logger.info('%s: %s', self.name, task)
         self.lock.release()
 
     def run(self):
@@ -42,7 +42,8 @@ class Server(Thread):
                 files = [task['path']]
                 tasks_left = []
                 for t in self.tasks:
-                    if t['action'] == 'upload' and dirname(t['path']) == dirname(task['path']):
+                    if (t['action'] == 'upload'
+                            and dirname(t['path']) == dirname(task['path'])):
                         # In the same directory. Merge it to one scp.
                         files.append(t['path'])
                     else:
@@ -56,9 +57,9 @@ class Server(Thread):
             elif task['action'] == 'mv':
                 self._mv(task['src_path'], task['dest_path'])
             else:
-                raise ValueError('Unknown action {}'.format(task['action']))
+                raise ValueError(f'Unknown action {task["action"]}')
 
-            logger.info(f'{self.name}: {len(self.tasks)} task(s) left')
+            logger.info('%s: %d task(s) left', self.name, len(self.tasks))
 
         time.sleep(self.refresh_interval)
 
@@ -66,23 +67,24 @@ class Server(Thread):
         return os.path.join(self.path_root, path)
 
     def _upload(self, files):
-        logger.info(f'{self.name}: uploading {files}')
+        logger.info('%s: uploading %s', self.name, files)
         dn = dirname(files[0])
         remote_path = self._get_remote_path(dn)
         args_scp = ['scp'] + files + [f'{self.name}:{remote_path}']
         try:
-            output = subprocess.check_output(args_scp, stderr=subprocess.STDOUT)
+            subprocess.check_output(args_scp, stderr=subprocess.STDOUT)
         except CalledProcessError as err:
             if 'No such file or directory' in err.output.decode():
                 # Create the missing directory and retry
                 self._mkdir(dn)
-                subprocess.run(args_scp, stderr=subprocess.STDOUT)
+                subprocess.run(args_scp, stderr=subprocess.STDOUT, check=True)
 
     def _mkdir(self, path):
-        logger.info(f'{self.name}: mkdir {path}')
+        logger.info('%s: mkdir %s', self.name, path)
         path = self._get_remote_path(path)
         mkdir_code = f"import os; os.makedirs('{path}',exist_ok=True)"
-        subprocess.run(['ssh', f'{self.name}', f'python3 -c "{mkdir_code}"'])
+        subprocess.run(
+            ['ssh', f'{self.name}', f'python3 -c "{mkdir_code}"'], check=True)
 
     def _mv(self, src_path, dest_path):
         print('TODO mv', src_path, dest_path)

@@ -1,7 +1,5 @@
-import sys
 import logging
 import argparse
-import labsync.utils
 from labsync.listen import listen
 from labsync.tb_update import tb_update
 from labsync.init import init
@@ -13,9 +11,10 @@ logger = logging.getLogger(__name__)
 
 def get_global_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', type=str, default='listen', 
-                        choices=['listen', 'tb', 'tb-update', 'init', 'get', 
-                                'put', 'task', 'overleaf', 'ol', 'google-drive', 'gd'], 
+    parser.add_argument('command', type=str, default='listen',
+                        choices=['listen', 'tb', 'tb-update', 'init', 'get',
+                                'put', 'task', 'overleaf', 'ol', 'google-drive',
+                                'gd'],
                         nargs='?', help='Command of this run')
     shortcuts = {
         'tb': 'tb-update',
@@ -23,7 +22,7 @@ def get_global_parser():
         'gd': 'google-drive'
     }
     return parser, shortcuts
-    
+
 def cli_main():
     parser, shortcuts = get_global_parser()
     args, _ = parser.parse_known_args()
