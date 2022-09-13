@@ -77,14 +77,14 @@ class Server(Thread):
             if 'No such file or directory' in err.output.decode():
                 # Create the missing directory and retry
                 self._mkdir(dn)
-                subprocess.run(args_scp, stderr=subprocess.STDOUT, check=True)
+                subprocess.run(args_scp, stderr=subprocess.STDOUT, check=False)
 
     def _mkdir(self, path):
         logger.info('%s: mkdir %s', self.name, path)
         path = self._get_remote_path(path)
         mkdir_code = f"import os; os.makedirs('{path}',exist_ok=True)"
         subprocess.run(
-            ['ssh', f'{self.name}', f'python3 -c "{mkdir_code}"'], check=True)
+            ['ssh', f'{self.name}', f'python3 -c "{mkdir_code}"'], check=False)
 
     def _mv(self, src_path, dest_path):
         print('TODO mv', src_path, dest_path)

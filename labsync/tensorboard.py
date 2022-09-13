@@ -25,4 +25,4 @@ class Tensorboard(Thread):
     def run(self):
         subprocess.run([
             'tensorboard', '--logdir', self.logdir, '--port', str(self.port)],
-            check=True)
+            check=False)

@@ -46,7 +46,7 @@ class TaskManager(Thread):
             'nvidia-smi',
             '--query-gpu=memory.free,utilization.gpu',
             '--format=csv'
-        ], stdout=subprocess.PIPE, check=True).stdout.decode().split('\n')[1:-1]
+        ], stdout=subprocess.PIPE, check=False).stdout.decode().split('\n')[1:-1]
         gpus = []
         for i in range(len(stat)):
             if (time.time() - self.device_last_used.get(i, 0)

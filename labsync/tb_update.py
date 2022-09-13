@@ -56,7 +56,7 @@ def update(args, ids):
             if os.path.exists(tmp):
                 shutil.rmtree(tmp)
             subprocess.run(
-                ['ssh', f'{args.server}:{path_remote}', tmp], check=True)
+                ['ssh', f'{args.server}:{path_remote}', tmp], check=False)
             shutil.copytree(tmp, tid, dirs_exist_ok=True)
 
 def tb_update():
