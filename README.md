@@ -58,14 +58,11 @@ lab gd -r PATH
 ```
 This will archive the directory and upload the archive.
 
-## Overleaf
+## Latex
 
-If you sometimes want to write in a local editor while also use Overleaf to store or share the document,
-you may use the following shortcut to pull remote changes
-and push local changes to Overleaf via Git.
-
+Synchronize changes with git or Overleaf (pull and push):
 ```
-lab ol update
+lab tex git
 ```
 
 ## Indentation

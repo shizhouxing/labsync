@@ -20,7 +20,7 @@ config = {
         'port': 9000,
         'logdir': 'tensorboard'
     },
-    'overleaf': {
+    'latex': {
         'patterns': [
             '*.tex',
             '*.bib',

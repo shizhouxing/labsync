@@ -4,7 +4,7 @@ from labsync.listen import listen
 from labsync.tb_update import tb_update
 from labsync.init import init
 from labsync.taskmanager import task_manager_entry
-from labsync.overleaf import overleaf
+from labsync.latex import latex
 from labsync.google_drive import google_drive
 from labsync.indent import indent
 
@@ -14,12 +14,12 @@ def get_global_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', type=str, default='listen',
                         choices=['listen', 'tb', 'tb-update', 'init', 'get',
-                                'put', 'task', 'overleaf', 'ol', 'google-drive',
+                                'put', 'task', 'tex', 'latex', 'google-drive',
                                 'gd', 'indent'],
                         nargs='?', help='Command of this run')
     shortcuts = {
         'tb': 'tb-update',
-        'ol': 'overleaf',
+        'tex': 'latex',
         'gd': 'google-drive'
     }
     return parser, shortcuts
@@ -37,8 +37,8 @@ def cli_main():
         init()
     elif args.command == 'task':
         task_manager_entry()
-    elif args.command == 'overleaf':
-        overleaf()
+    elif args.command == 'latex':
+        latex()
     elif args.command == 'google-drive':
         google_drive()
     elif args.command == 'indent':
