@@ -60,10 +60,14 @@ This will archive the directory and upload the archive.
 
 ## Latex
 
-Synchronize changes with git or Overleaf (pull and push):
 ```
-lab tex git
+lab tex COMMAND
 ```
+
+Supported commands include:
+* `git`: synchronize changes with git or Overleaf (pull and push)
+* `build`: build Latex.
+* `clean`: clean temporary files.
 
 ## Indentation
 
