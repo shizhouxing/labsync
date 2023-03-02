@@ -76,7 +76,8 @@ def google_drive():
     for file in args.files:
         if file.endswith('/'):
             file = file[:-1]
-        if os.path.isdir(file):
+        isdir = os.path.isdir(file)
+        if isdir:
             if not args.r:
                 print(f'Skipping directory {file}')
                 continue
@@ -90,5 +91,6 @@ def google_drive():
         file.SetContentFile(path)
         file.Upload()
         print(f'File {path} uploaded to Google Drive')
-        if path.startswith('/tmp/'):
-            os.system('rm {path}')
+        if isdir or path.startswith('/tmp/'):
+            assert path.endswith('.tgz')
+            os.system(f'rm {path}')
