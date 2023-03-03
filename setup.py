@@ -11,19 +11,16 @@ setup(
       'watchdog>=0.10',
       'flask>=1.1',
       'appdirs>=1.4',
-      'oslo.concurrency>=4.2',  
-      'pydrive>=1.3',
+      'oslo.concurrency>=4.2',
+      'pydrive2>=1.15',
       'httplib2==0.15',
-      'google-api-core==2.4.0',
-      'google-auth==2.3.3',
-      'google-api-python-client==2.44.0'
     ],
     url='https://github.com/shizhouxing/labsync',
     entry_points={
       'console_scripts': [
           'lab = labsync.main:cli_main'
       ],
-    },    
+    },
     python_requires=">=3.7",
-    license='GNU GPL v3',    
+    license='GNU GPL v3',
 )

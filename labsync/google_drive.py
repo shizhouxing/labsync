@@ -4,8 +4,8 @@ import argparse
 import os
 import json
 from .utils import user_data_dir
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 
 
 # silence error message "file_cache is only supported with oauth2client<4.0.0"
