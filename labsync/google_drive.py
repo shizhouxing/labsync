@@ -56,7 +56,9 @@ def authenticate():
         try:
             gauth.Refresh()
         except: # pylint: disable=bare-except
-            print('Not able to refresh token. Reauthenticating...')
+            print('Not able to refresh the token:')
+            import traceback; traceback.print_exc()
+            print('Reauthenticating...')
             gauth = GoogleAuth()
             gauth.LoadClientConfigFile(client_config_file)
             gauth.LocalWebserverAuth()
