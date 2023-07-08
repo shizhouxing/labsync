@@ -14,6 +14,8 @@ setup(
       'oslo.concurrency>=4.2',
       'pydrive2>=1.15',
       'httplib2==0.15',
+      'google_api_core==2.11.1',
+      'google_auth==2.21.0',
     ],
     url='https://github.com/shizhouxing/labsync',
     entry_points={
