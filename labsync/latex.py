@@ -8,7 +8,7 @@ from .utils import get_config
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', type=str, choices=['git', 'clean', 'build'])
-    parser.add_argument('--main_file', '--main', type=str, default='main')
+    parser.add_argument('--main_file', '--main', '-m', type=str, default='main')
     return parser
 
 def latex():

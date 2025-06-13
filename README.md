@@ -1,77 +1,75 @@
 # LabSync
 
-This is a toolkit for development on university lab servers.
-The major functionality is to watch local file changes and synchronize them to multiple remote servers.
-It is also intended to include some other shortcuts that may be frequently used
-while working with remote servers, such as synchronizing Tensorboard logs,
-or uploading files to Google Drive.
+A development toolkit designed for university lab servers. Key functionalities include:
 
-## Installation
+- **File Synchronization**: Monitor local file changes and synchronize them to multiple remote servers
+- **LaTeX Tools**: Build and manage LaTeX documents with Git integration
+- **Google Drive Integration**: Upload files directly to Google Drive
+- **Cluster Management**: Shortcuts for working with SLURM clusters
 
-The program is based on Python 3 (3.7+ is recommended). To install it, run:
+## Getting Started
+
+LabSync is developed in Python 3 (version 3.10+ recommended).
+
+**Install from source:**
 ```bash
-python setup.py install
+pip install .
 ```
-Or run `python setup.py develop` for development.
 
-Initialize a configuration file by inputing server information:
+**For development:**
+```bash
+pip install -e .
+```
+
+**Initialize configuration:**
 ```bash
 lab init
 ```
-The configuration file will be stored at `~/.labsync.config.json`.
-See the format of the [configuration file](https://github.com/shizhouxing/labsync/wiki/Configuration-file).
+This creates a configuration file at `~/.labsync.config.json` with your server details.
 
-## Synchronizing Local Changes
+## File Synchronization
 
-Listen for local changes to be synchronized to all the remote servers:
+Start monitoring local changes and synchronizing them to remote servers:
 ```bash
-lab [-t] [CONFIG] [-p PATH]
+lab [OPTIONS]
 ```
-`-t` is optional for starting a Tensorboard server locally.
-`CONFIG` is also optional and can be used to specify an alternative configuration file.
-`-p PATH` is optional for specifying the working directory on remote servers relative
-to the default path of the server.
 
-## Google Drive
+**Options:**
+- `-p PATH` - Specify the working directory on remote servers (relative to the default server path)
 
-Shortcut `lab gd` can be used for directly uploading files (such as large checkpoint files)
-from servers to Google Drive. This is based on the `pydrive` library.
+## Google Drive Integration
 
-### Setup
+Use `lab gd` to upload files directly from servers to Google Drive. This feature is powered by the `pydrive` library.
 
-For the first time to use this functionality, please create a project on  [Google Cloud Console](https://console.cloud.google.com/), and obtain a credential JSON file (Project -> APIs and services -> Credentials). You will be asked to copy and paste the content in the credential file to the console, and it will proceed to authentication using a web browser.
+### Initial Setup
 
-If you are using a terminal, the `webbrowser` Python library may proceed to a terminal browser, which may not work well for Google Could authentication.
-In this case, you may run `import webbrowser; print(webrowser)` in a Python terminal to check the path of `webbrowser.py`, and modify the code to disable registering terminal browsers (search for "console browsers" in the code).
-After this modification, the program is likely to print a URL instead of directly opening it. Please copy this URL and open it in your local machine to finish the authentication. In the end, it will redirect to a callback URL on localhost which does not work locally. Please return to the remote server to open this URL with `curl`.
+1. Create a project on [Google Cloud Console](https://console.cloud.google.com/)
+2. Obtain a credential JSON file (Project → APIs and services → Credentials)
+3. When prompted, copy and paste the credential file content into the console
+4. Complete authentication through your web browser
 
-### Upload a single file
+**Note for remote servers:** If your system doesn't support interactive web browsers, the program will display a URL for manual authentication. Copy this URL and open it on your local machine. After authentication, you'll be redirected to a localhost callback URL. Return to the remote server and access this URL using `curl`.
 
+### Usage
+
+**Upload a single file:**
 ```bash
 lab gd PATH
 ```
 
-### Upload a directory
-
+**Upload a directory:**
 ```bash
 lab gd -r PATH
 ```
-This will archive the directory and upload the archive.
+This archives the directory and uploads the compressed file.
 
-## Latex
+## LaTeX Tools
 
-```
+```bash
 lab tex COMMAND
 ```
 
-Supported commands include:
-* `git`: synchronize changes with git or Overleaf (pull and push)
-* `build`: build Latex.
-* `clean`: clean temporary files.
-
-## Indentation
-
-Convert indentations for Python files by:
-```
-lab indent indentations_before indentations_after file ...
-```
+**Available commands:**
+- `git` - Synchronize changes with Git or Overleaf (pull and push)
+- `build` - Compile LaTeX documents
+- `clean` - Remove temporary files

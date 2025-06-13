@@ -9,7 +9,7 @@ from watchdog.events import FileModifiedEvent
 class FSEventHandler(PatternMatchingEventHandler):
     def __init__(self, synchronizer, patterns=None, ignore_patterns=None,
                 ignore_patterns_re=None):
-        super().__init__(patterns, ignore_patterns)
+        super().__init__(patterns=patterns, ignore_patterns=ignore_patterns)
         self.synchronizer = synchronizer
         self.paused = False
         if ignore_patterns_re is None:

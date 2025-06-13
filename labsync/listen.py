@@ -5,14 +5,11 @@ import argparse
 import os
 from .utils import get_config
 from .watchfs import WatchFS
-from .tensorboard import Tensorboard
 
 logger = logging.getLogger(__name__)
 
 def get_parser():
     parser = argparse.ArgumentParser(prog='lab listen')
-    parser.add_argument('--tensorboard', '-t', action='store_true',
-                        help='Start tensorboard server')
     return parser
 
 def listen():
@@ -30,9 +27,6 @@ def listen():
     task_watchfs.start()
     logger.info('Start listening for local file changes')
 
-    if args.tensorboard:
-        task_tensorboard = Tensorboard()
-        task_tensorboard.start()
 
     while True:
         line = input().split()

@@ -16,10 +16,6 @@ config = {
         '.pytest_cache',
         '*.pyc'
     ],
-    'tensorboard': {
-        'port': 9000,
-        'logdir': 'tensorboard'
-    },
     'latex': {
         'patterns': [
             '*.tex',
@@ -78,14 +74,6 @@ def init():
     for host in hosts:
         config['servers'][host] = { 'enable': True }
 
-    tb = get_bool('Use Tensorboard?', default=False)
-    if tb:
-        port = input('Tensorboard port (default: 9000): ') or '9000'
-        logdir = get_str('Logdir (default: tensorboard): ') or 'tensorboard'
-        config['tensorboard'] = {
-            'port': port,
-            'logdir': logdir
-        }
 
     path = '.labsync.config.json'
     with open(path, 'w') as file:
