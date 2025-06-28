@@ -1,5 +1,6 @@
 import logging
 import argparse
+import sys
 from labsync.listen import listen
 from labsync.init import init
 from labsync.latex import latex
@@ -12,10 +13,12 @@ def get_global_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', type=str, default='listen',
                         choices=['listen', 'init', 'tex', 
-                                'google-drive', 'gd', 'cluster'],
+                                'google-drive', 'gd', 'cluster', 'ls', 'jobs'],
                         nargs='?', help='Command of this run')
     shortcuts = {
-        'gd': 'google-drive'
+        'gd': 'google-drive',
+        'ls': 'cluster ls',
+        'jobs': 'cluster jobs'
     }
     return parser, shortcuts
 
@@ -23,7 +26,15 @@ def cli_main():
     parser, shortcuts = get_global_parser()
     args, _ = parser.parse_known_args()
     if args.command in shortcuts:
-        args.command = shortcuts[args.command]
+        expanded = shortcuts[args.command]
+        if ' ' in expanded:
+            # Handle commands with subcommands like 'cluster ls'
+            parts = expanded.split(' ', 1)
+            args.command = parts[0]
+            # Insert the subcommand into sys.argv
+            sys.argv.insert(2, parts[1])
+        else:
+            args.command = expanded
     if args.command == 'listen':
         listen()
     elif args.command == 'init':

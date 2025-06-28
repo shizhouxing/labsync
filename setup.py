@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='labsync',
-    version='0.2',
+    version='0.3',
     description='Toolkit for research on lab servers',
     author='Zhouxing Shi',
     author_email='zhouxingshichn@gmail.com',
@@ -25,6 +25,6 @@ setup(
           'lab = labsync.main:cli_main'
       ],
     },
-    python_requires=">=3.7",
+    python_requires=">=3.10",
     license='GNU GPL v3',
 )

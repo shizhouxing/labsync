@@ -5,7 +5,7 @@ A development toolkit designed for university lab servers. Key functionalities i
 - **File Synchronization**: Monitor local file changes and synchronize them to multiple remote servers
 - **LaTeX Tools**: Build and manage LaTeX documents with Git integration
 - **Google Drive Integration**: Upload files directly to Google Drive
-- **Cluster Management**: Shortcuts for working with SLURM clusters
+- **Cluster Shortcuts**: Shortcuts for working with SLURM clusters
 
 ## Getting Started
 
@@ -73,3 +73,13 @@ lab tex COMMAND
 - `git` - Synchronize changes with Git or Overleaf (pull and push)
 - `build` - Compile LaTeX documents
 - `clean` - Remove temporary files
+
+## Cluster Shortcuts
+
+View GPU status and usage on SLURM clusters:
+
+```bash
+lab cluster ls
+# or use the shortcut:
+lab ls
+```
