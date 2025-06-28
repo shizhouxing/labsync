@@ -6,6 +6,7 @@ from labsync.init import init
 from labsync.latex import latex
 from labsync.google_drive import google_drive
 from labsync.cluster import cluster
+from labsync.hf import hf
 
 logger = logging.getLogger(__name__)
 
@@ -13,19 +14,21 @@ def get_global_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', type=str, default='listen',
                         choices=['listen', 'init', 'tex', 
-                                'google-drive', 'gd', 'cluster', 'ls', 'jobs'],
+                                'google-drive', 'gd', 'cluster', 'ls', 'jobs', 'hf'],
                         nargs='?', help='Command of this run')
     shortcuts = {
         'gd': 'google-drive',
         'ls': 'cluster ls',
-        'jobs': 'cluster jobs'
+        'jobs': 'cluster jobs',
+        'hf': 'hf ls'
     }
     return parser, shortcuts
 
 def cli_main():
     parser, shortcuts = get_global_parser()
     args, _ = parser.parse_known_args()
-    if args.command in shortcuts:
+    # Only apply shortcuts if the command exactly matches (no additional args)
+    if args.command in shortcuts and len(sys.argv) == 2:
         expanded = shortcuts[args.command]
         if ' ' in expanded:
             # Handle commands with subcommands like 'cluster ls'
@@ -45,6 +48,8 @@ def cli_main():
         google_drive()
     elif args.command == 'cluster':
         cluster()
+    elif args.command == 'hf':
+        hf()
 
 if __name__ == '__main__':
     cli_main()

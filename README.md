@@ -83,3 +83,25 @@ lab cluster ls
 # or use the shortcut:
 lab ls
 ```
+
+## HuggingFace
+
+**Requirements:**
+- `git-lfs` (if using conda: `conda install -c conda-forge git-lfs`)
+
+**List repositories:**
+```bash
+lab hf ls
+# or use the shortcut:
+lab hf
+```
+
+**Delete a repository:**
+```bash
+lab hf rm REPO_NAME
+```
+
+**Copy a repository:**
+```bash
+lab hf cp ORIGINAL_REPO NEW_REPO
+```

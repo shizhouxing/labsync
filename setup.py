@@ -18,6 +18,7 @@ setup(
       'google_auth>=2.25.0',
       'gpustat>=1.1',
       'termcolor>=2.4.0',
+      'huggingface_hub>=0.33.0',
     ],
     url='https://github.com/shizhouxing/labsync',
     entry_points={
