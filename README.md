@@ -2,10 +2,11 @@
 
 A development toolkit designed for university lab servers. Key functionalities include:
 
-- **File Synchronization**: Monitor local file changes and synchronize them to multiple remote servers
+- **Cluster Shortcuts**: Shortcuts for working with SLURM clusters
+- **HuggingFace Shortcuts**: Shortcuts for working with HuggingFace repositories.
 - **LaTeX Tools**: Build and manage LaTeX documents with Git integration
 - **Google Drive Integration**: Upload files directly to Google Drive
-- **Cluster Shortcuts**: Shortcuts for working with SLURM clusters
+- File Synchronization (deprecated): Monitor local file changes and synchronize them to multiple remote servers
 
 ## Getting Started
 
@@ -21,21 +22,33 @@ pip install .
 pip install -e .
 ```
 
-**Initialize configuration:**
-```bash
-lab init
-```
-This creates a configuration file at `~/.labsync.config.json` with your server details.
+## Cluster Shortcuts
 
-## File Synchronization
+**Commands:**
+* **View GPU status and usage:** `lab cluster ls` or use the shortcut `lab ls`
+* **List your SLURM jobs:** `lab cluster jobs`
+* **Kill SLURM jobs by ID range:** `lab cluster kill START_JOB_ID END_JOB_ID`
 
-Start monitoring local changes and synchronizing them to remote servers:
-```bash
-lab [OPTIONS]
-```
+## HuggingFace
 
-**Options:**
-- `-p PATH` - Specify the working directory on remote servers (relative to the default server path)
+**Requirements:**
+- `git-lfs` (if using conda: `conda install -c conda-forge git-lfs`)
+
+**Commands:**
+* **List repositories:** `lab hf ls` or use the shortcut `lab hf`
+* **Delete a repository:** `lab hf rm REPO_NAME`
+* **Copy a repository:** `lab hf cp ORIGINAL_REPO NEW_REPO`
+* **Concatenate multiple repositories:** `lab hf concat MAIN_REPO SOURCE_REPO1 SOURCE_REPO2 ...`
+* **Replace a column in one repository with values from another:** `lab hf replace COLUMN_NAME TARGET_REPO SOURCE_REPO`
+* **Reset a repository to a previous commit:** `lab hf reset REPO_NAME COMMIT_ID`
+
+## LaTeX Tools
+
+**Commands:**
+* **Synchronize changes with Git or Overleaf:** `lab tex git`
+* **Compile LaTeX documents:** `lab tex build`
+* **Remove temporary files:** `lab tex clean`
+
 
 ## Google Drive Integration
 
@@ -63,45 +76,20 @@ lab gd -r PATH
 ```
 This archives the directory and uploads the compressed file.
 
-## LaTeX Tools
+## File Synchronization
 
+*(This functionality is not sufficiently documented and is no longer maintained as of 2025.)*
+
+When using it for the first time, run:
 ```bash
-lab tex COMMAND
+lab init
+```
+This creates a configuration file at `~/.labsync.config.json` with your server details.
+
+Start monitoring local changes and synchronizing them to remote servers:
+```bash
+lab [OPTIONS]
 ```
 
-**Available commands:**
-- `git` - Synchronize changes with Git or Overleaf (pull and push)
-- `build` - Compile LaTeX documents
-- `clean` - Remove temporary files
-
-## Cluster Shortcuts
-
-View GPU status and usage on SLURM clusters:
-
-```bash
-lab cluster ls
-# or use the shortcut:
-lab ls
-```
-
-## HuggingFace
-
-**Requirements:**
-- `git-lfs` (if using conda: `conda install -c conda-forge git-lfs`)
-
-**List repositories:**
-```bash
-lab hf ls
-# or use the shortcut:
-lab hf
-```
-
-**Delete a repository:**
-```bash
-lab hf rm REPO_NAME
-```
-
-**Copy a repository:**
-```bash
-lab hf cp ORIGINAL_REPO NEW_REPO
-```
+**Options:**
+- `-p PATH` - Specify the working directory on remote servers (relative to the default server path)

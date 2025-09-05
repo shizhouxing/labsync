@@ -1,10 +1,10 @@
 import sys
 import argparse
 import tempfile
-import shutil
-import os
+import fnmatch
 from huggingface_hub import HfApi, snapshot_download, upload_folder
 from huggingface_hub.errors import RepositoryNotFoundError
+from datasets import load_dataset, DatasetDict, concatenate_datasets
 
 def get_repo_size(repo_info):
     """Calculates the total size of a repository from its file metadata."""
@@ -38,11 +38,11 @@ def _copy_repo_via_clone(api, original_repo, new_repo, repo_type):
             local_dir=temp_dir,
             local_dir_use_symlinks=False
         )
-        
+
         # Create the new repository (private)
         print(f"Creating new repository {new_repo}...")
         api.create_repo(repo_id=new_repo, repo_type=repo_type, private=True, exist_ok=True)
-        
+
         # Upload all files to the new repository
         print(f"Uploading to {new_repo}...")
         upload_folder(
@@ -53,90 +53,228 @@ def _copy_repo_via_clone(api, original_repo, new_repo, repo_type):
         )
 
 
+def hf_concat(main_repo, source_repos):
+    """
+    Concatenates multiple dataset repositories into a new main repository.
+    """
+
+    print(f"Creating concatenated dataset: {main_repo}")
+    print(f"Source repositories: {', '.join(source_repos)}")
+
+    source_datasets = []
+    all_splits = set()
+
+    for source_repo in source_repos:
+        print(f"Loading dataset: {source_repo}")
+        dataset = load_dataset(source_repo)
+        source_datasets.append(dataset)
+        print(f"  Successfully loaded {source_repo}")
+        all_splits.update(dataset.keys())
+
+    if not source_datasets:
+        print("No datasets were successfully loaded.")
+        return
+
+    concatenated_splits = {}
+    for split_name in all_splits:
+        datasets_for_split = []
+
+        for dataset in source_datasets:
+            if split_name in dataset:
+                datasets_for_split.append(dataset[split_name])
+
+        if datasets_for_split:
+            print(f"Concatenating {split_name} split...")
+            try:
+                concatenated_splits[split_name] = concatenate_datasets(datasets_for_split)
+                print(f"  {split_name} split has {len(concatenated_splits[split_name])} examples")
+            except Exception as e:
+                print(f"Error concatenating {split_name} split: {e}")
+                return
+
+    final_dataset = DatasetDict(concatenated_splits)
+    print(f"Uploading concatenated dataset to {main_repo}...")
+    final_dataset.push_to_hub(
+        main_repo,
+        commit_message=f"Concatenate datasets: {', '.join(source_repos)}",
+        private=True
+    )
+    print(f"Successfully created concatenated dataset: {main_repo}")
+
+
+def hf_replace(key, repo_A, repo_B):
+    """
+    Replace the column named "key" in repo_A with values from repo_B
+    """
+    print(f"Loading source dataset: {repo_B}")
+    dataset_B = load_dataset(repo_B)
+
+    print(f"Loading target dataset: {repo_A}")
+    dataset_A = load_dataset(repo_A)
+
+    # Check if the key column exists in both datasets
+    for split_name in dataset_A.keys():
+        if split_name not in dataset_B:
+            print(f"Error: Split '{split_name}' not found in source dataset {repo_B}")
+            return
+
+        if key not in dataset_A[split_name].column_names:
+            print(f"Error: Column '{key}' not found in target dataset {repo_A} split '{split_name}'")
+            return
+
+        if key not in dataset_B[split_name].column_names:
+            print(f"Error: Column '{key}' not found in source dataset {repo_B} split '{split_name}'")
+            return
+
+        if len(dataset_A[split_name]) != len(dataset_B[split_name]):
+            print(f"Error: Split '{split_name}' has different lengths: {len(dataset_A[split_name])} vs {len(dataset_B[split_name])}")
+            return
+
+    updated_splits = {}
+    for split_name in dataset_A.keys():
+        print(f"Replacing column '{key}' in split '{split_name}'...")
+        dataset_split = dataset_A[split_name].remove_columns([key])
+        dataset_split = dataset_split.add_column(key, dataset_B[split_name][key])
+        updated_splits[split_name] = dataset_split
+
+    updated_dataset = DatasetDict(updated_splits)
+
+    print(f"Uploading updated dataset to {repo_A}...")
+    updated_dataset.push_to_hub(
+        repo_A,
+        commit_message=f"Replace column '{key}' with values from {repo_B}",
+        private=True
+    )
+    print(f"Successfully replaced column '{key}' in {repo_A}")
+
+
+def hf_reset(repo_url, commit_id):
+    """
+    Reset a repository to a previous commit
+    """
+    print(f"Loading dataset {repo_url} at commit {commit_id}...")
+    dataset = load_dataset(repo_url, revision=commit_id)
+    print(f"Uploading dataset content from commit {commit_id}...")
+    dataset.push_to_hub(
+        repo_url,
+        commit_message=f"Reset to commit {commit_id}",
+        private=True
+    )
+
+
 def hf_copy(original_repo, new_repo):
     """
     Duplicates a repository under the authenticated user's name.
     """
     try:
         api = HfApi()
-        username = api.whoami()["name"]
-        
-        # Handle original repo name
-        if '/' in original_repo:
-            original_full_name = original_repo
-        else:
-            original_full_name = f"{username}/{original_repo}"
-            
-        # Handle new repo name (always under current user)
-        if '/' in new_repo:
-            new_full_name = new_repo
-        else:
-            new_full_name = f"{username}/{new_repo}"
-            
-        print(f"Copying repository from {original_full_name} to {new_full_name}")
-        
+
+        print(f"Copying repository from {original_repo} to {new_repo}")
+
         # Try to copy as a model first
         try:
-            _copy_repo_via_clone(api, original_full_name, new_full_name, "model")
-            print(f"Successfully copied model: {original_full_name} -> {new_full_name}")
+            _copy_repo_via_clone(api, original_repo, new_repo, "model")
+            print(f"Successfully copied model: {original_repo} -> {new_repo}")
             return
         except Exception as model_error:
             print(f"Model copy failed: {model_error}", file=sys.stderr)
-            
+
         # Try to copy as a dataset
         try:
-            _copy_repo_via_clone(api, original_full_name, new_full_name, "dataset")
-            print(f"Successfully copied dataset: {original_full_name} -> {new_full_name}")
+            _copy_repo_via_clone(api, original_repo, new_repo, "dataset")
+            print(f"Successfully copied dataset: {original_repo} -> {new_repo}")
             return
         except Exception as dataset_error:
             print(f"Dataset copy failed: {dataset_error}", file=sys.stderr)
-            
-        print(f"Error: Could not find repository {original_full_name} as either a model or dataset")
+
+        print(f"Error: Could not find repository {original_repo} as either a model or dataset")
         print("Make sure the repository name is correct and you have permission to access it.")
-        
+
     except Exception as e:
         print(f"An error occurred: {e}", file=sys.stderr)
         print("Please ensure you are logged in with 'huggingface-cli login'.", file=sys.stderr)
 
 
-def hf_delete(repo_name):
+def hf_delete(repo_patterns):
     """
-    Deletes a repository under the authenticated user's name.
+    Deletes repository(ies) matching the patterns under the authenticated user's name.
+    Supports glob patterns like 'rl_202504*' and multiple patterns.
     """
     try:
         api = HfApi()
         username = api.whoami()["name"]
-        
-        # Check if repo_name already includes username
-        if '/' in repo_name:
-            full_repo_name = repo_name
-        else:
-            full_repo_name = f"{username}/{repo_name}"
-            
-        print(f"Attempting to delete repository: {full_repo_name}")
-        
-        # Try to delete as a model first
-        try:
-            api.delete_repo(repo_id=full_repo_name, repo_type="model")
-            print(f"Successfully deleted model: {full_repo_name}")
+
+        print("Fetching repository list...")
+        all_repos = _get_all_repositories(api, username)
+
+        matching_repos = set()
+        for pattern in repo_patterns:
+            for repo_name, repo_type in all_repos:
+                # Check if pattern matches the repo name (with or without username)
+                if fnmatch.fnmatch(repo_name, pattern) or fnmatch.fnmatch(repo_name.split('/')[-1], pattern):
+                    matching_repos.add((repo_name, repo_type))
+
+        matching_repos = list(matching_repos)
+
+        if not matching_repos:
+            print(f"No repositories found matching patterns: {', '.join(repo_patterns)}")
             return
-        except Exception as model_error:
-            pass
-            
-        # Try to delete as a dataset
-        try:
-            api.delete_repo(repo_id=full_repo_name, repo_type="dataset")
-            print(f"Successfully deleted dataset: {full_repo_name}")
-            return
-        except Exception as dataset_error:
-            pass
-            
-        print(f"Error: Could not find repository {full_repo_name} as either a model or dataset")
-        print("Make sure the repository name is correct and you have permission to delete it.")
-        
+
+        # Check if any patterns contain glob characters
+        has_glob_patterns = any('*' in pattern or '?' in pattern or '[' in pattern for pattern in repo_patterns)
+
+        print(f"\nFound {len(matching_repos)} repository(ies) matching patterns {repo_patterns}:")
+        print("-" * 81)
+        for repo_name, repo_type in sorted(matching_repos):
+            print(f"{repo_name:<70} ({repo_type})")
+        print("-" * 81)
+
+        # Only ask for confirmation if glob patterns are used
+        if has_glob_patterns:
+            confirm = input(f"\nAre you sure you want to delete these {len(matching_repos)} repository(ies)? (y/N): ").strip().lower()
+            if confirm != 'y':
+                print("Deletion cancelled.")
+                return
+
+        deleted_count = 0
+        for repo_name, repo_type in sorted(matching_repos):
+            try:
+                print(f"Deleting {repo_type}: {repo_name}...")
+                api.delete_repo(repo_id=repo_name, repo_type=repo_type)
+                print(f"Successfully deleted {repo_type}: {repo_name}")
+                deleted_count += 1
+            except Exception as e:
+                print(f"Failed to delete {repo_type} {repo_name}: {e}", file=sys.stderr)
+
+        print(f"\nDeleted {deleted_count} out of {len(matching_repos)} repositories.")
+
     except Exception as e:
         print(f"An error occurred: {e}", file=sys.stderr)
         print("Please ensure you are logged in with 'huggingface-cli login'.", file=sys.stderr)
+
+
+def _get_all_repositories(api, username):
+    """
+    Get all repositories (models and datasets) for a user.
+    Returns a list of tuples: (repo_name, repo_type)
+    """
+    repositories = []
+
+    try:
+        model_repos = api.list_models(author=username)
+        for model in model_repos:
+            repositories.append((model.modelId, "model"))
+    except Exception as e:
+        print(f"Warning: Could not fetch models: {e}", file=sys.stderr)
+
+    try:
+        dataset_repos = api.list_datasets(author=username)
+        for dataset in dataset_repos:
+            repositories.append((dataset.id, "dataset"))
+    except Exception as e:
+        print(f"Warning: Could not fetch datasets: {e}", file=sys.stderr)
+
+    return repositories
 
 
 def hf_ls():
@@ -156,8 +294,16 @@ def hf_ls():
         print("Analyzing model sizes...")
         for model in model_repos:
             try:
+                # Get the actual repository size including all commits
                 model_info = api.model_info(repo_id=model.modelId, files_metadata=True)
-                total_size = get_repo_size(model_info)
+
+                # Use usedStorage which includes total storage across all commits
+                if hasattr(model_info, 'usedStorage') and model_info.usedStorage is not None:
+                    total_size = model_info.usedStorage
+                else:
+                    # Fallback to calculating from current files only
+                    total_size = get_repo_size(model_info)
+
                 model_data.append({"id": model.modelId, "size": total_size})
             except RepositoryNotFoundError:
                 print(f"Warning: Could not find repository {model.modelId}. It may have been deleted.", file=sys.stderr)
@@ -181,8 +327,16 @@ def hf_ls():
         print("\nAnalyzing dataset sizes...")
         for dataset in dataset_repos:
             try:
+                # Get the actual repository size including all commits
                 dataset_info = api.dataset_info(repo_id=dataset.id, files_metadata=True)
-                total_size = get_repo_size(dataset_info)
+
+                # Use usedStorage which includes total storage across all commits
+                if hasattr(dataset_info, 'usedStorage') and dataset_info.usedStorage is not None:
+                    total_size = dataset_info.usedStorage
+                else:
+                    # Fallback to calculating from current files only
+                    total_size = get_repo_size(dataset_info)
+
                 dataset_data.append({"id": dataset.id, "size": total_size})
             except RepositoryNotFoundError:
                 print(f"Warning: Could not find repository {dataset.id}. It may have been deleted.", file=sys.stderr)
@@ -209,31 +363,47 @@ def hf():
     """Handle HuggingFace commands."""
     parser = argparse.ArgumentParser(prog='lab hf', description='HuggingFace utilities')
     subparsers = parser.add_subparsers(dest='subcommand', help='Available subcommands')
-    
-    # ls subcommand
+
     ls_parser = subparsers.add_parser('ls', help='List repositories and their sizes')
-    
-    # rm subcommand for delete
-    rm_parser = subparsers.add_parser('rm', help='Delete a repository')
-    rm_parser.add_argument('repo_name', help='Repository name to delete')
-    
-    # copy subcommand
+
+    rm_parser = subparsers.add_parser('rm', help='Delete repository(ies)')
+    rm_parser.add_argument('repo_patterns', nargs='+', help='Repository name(s) or pattern(s) to delete')
+
     copy_parser = subparsers.add_parser('cp', help='Copy/duplicate a repository')
     copy_parser.add_argument('original_repo', help='Original repository name')
     copy_parser.add_argument('new_repo', help='New repository name')
-    
+
+    concat_parser = subparsers.add_parser('concat', help='Concatenate multiple repositories into one')
+    concat_parser.add_argument('main_repo', help='Main repository name to create')
+    concat_parser.add_argument('source_repos', nargs='+', help='Source repository names to concatenate')
+
+    replace_parser = subparsers.add_parser('replace', help='Replace a column in dataset A with values from dataset B')
+    replace_parser.add_argument('key', help='Column name to replace')
+    replace_parser.add_argument('repo_A', help='Target dataset repository (will be modified)')
+    replace_parser.add_argument('repo_B', help='Source dataset repository (provides new values)')
+
+    reset_parser = subparsers.add_parser('reset', help='Reset repository to a previous commit')
+    reset_parser.add_argument('repo_url', help='Repository name (e.g., username/repo-name)')
+    reset_parser.add_argument('commit_id', help='Commit ID to reset to')
+
     # Get the args starting from position 2
     hf_args = sys.argv[2:]
-    
+
     # If no arguments provided, default to ls
     if not hf_args:
         args = parser.parse_args(['ls'])
     else:
         args = parser.parse_args(hf_args)
-    
+
     if args.subcommand == 'ls' or args.subcommand is None:
         hf_ls()
     elif args.subcommand == 'rm':
-        hf_delete(args.repo_name)
+        hf_delete(args.repo_patterns)
     elif args.subcommand == 'cp':
         hf_copy(args.original_repo, args.new_repo)
+    elif args.subcommand == 'concat':
+        hf_concat(args.main_repo, args.source_repos)
+    elif args.subcommand == 'replace':
+        hf_replace(args.key, args.repo_A, args.repo_B)
+    elif args.subcommand == 'reset':
+        hf_reset(args.repo_url, args.commit_id)

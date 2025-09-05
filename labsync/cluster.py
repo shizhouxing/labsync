@@ -411,12 +411,22 @@ def cluster_jobs(args):
     print("=" * 100)
 
 
+def cluster_kill(args):
+    for job_id in range(args.start_job_id, args.end_job_id + 1):
+        cmd = f"scancel {job_id}"
+        run_command(cmd)
+        print(f"Killed job {job_id}")
+
+
 def get_parser():
     parser = argparse.ArgumentParser(prog='labsync cluster')
     subparsers = parser.add_subparsers(dest='subcommand', help='Cluster shortcuts')
     
     ls_parser = subparsers.add_parser('ls', help='List GPU status in the cluster')
     jobs_parser = subparsers.add_parser('jobs', help='List slurm jobs for current user')
+    kill_parser = subparsers.add_parser('kill', help='Kill slurm jobs by ID range')
+    kill_parser.add_argument('start_job_id', type=int, help='Start job ID')
+    kill_parser.add_argument('end_job_id', type=int, help='End job ID')
     
     return parser
 
@@ -429,5 +439,7 @@ def cluster():
         cluster_ls(args)
     elif args.subcommand == 'jobs':
         cluster_jobs(args)
+    elif args.subcommand == 'kill':
+        cluster_kill(args)
     else:
         parser.print_help()
