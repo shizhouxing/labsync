@@ -25,33 +25,6 @@ def format_size(size_in_bytes):
         size_in_bytes /= 1024.0
     return f"{size_in_bytes:.2f} PB"
 
-def _copy_repo_via_clone(api, original_repo, new_repo, repo_type):
-    """
-    Copy a repository by downloading it and uploading to a new repo.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Download the original repository
-        print(f"Downloading {original_repo}...")
-        original_repo_path = snapshot_download(
-            repo_id=original_repo,
-            repo_type=repo_type,
-            local_dir=temp_dir,
-            local_dir_use_symlinks=False
-        )
-
-        # Create the new repository (private)
-        print(f"Creating new repository {new_repo}...")
-        api.create_repo(repo_id=new_repo, repo_type=repo_type, private=True, exist_ok=True)
-
-        # Upload all files to the new repository
-        print(f"Uploading to {new_repo}...")
-        upload_folder(
-            folder_path=temp_dir,
-            repo_id=new_repo,
-            repo_type=repo_type,
-            commit_message=f"Copy of {original_repo}"
-        )
-
 
 def hf_concat(main_repo, source_repos):
     """
@@ -162,33 +135,38 @@ def hf_reset(repo_url, commit_id):
     )
 
 
-def hf_copy(original_repo, new_repo):
+def hf_copy(original_repo, new_repo, commit_id=None):
     """
     Duplicates a repository under the authenticated user's name.
     """
     try:
         api = HfApi()
 
-        print(f"Copying repository from {original_repo} to {new_repo}")
+        if commit_id:
+            print(f"Copying repository from {original_repo} to {new_repo} at commit {commit_id}")
+        else:
+            print(f"Copying repository from {original_repo} to {new_repo}")
 
-        # Try to copy as a model first
-        try:
-            _copy_repo_via_clone(api, original_repo, new_repo, "model")
-            print(f"Successfully copied model: {original_repo} -> {new_repo}")
-            return
-        except Exception as model_error:
-            print(f"Model copy failed: {model_error}", file=sys.stderr)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            snapshot_download(
+                repo_id=original_repo, repo_type="dataset",
+                local_dir=temp_dir, local_dir_use_symlinks=False, revision=commit_id
+            )
 
-        # Try to copy as a dataset
-        try:
-            _copy_repo_via_clone(api, original_repo, new_repo, "dataset")
-            print(f"Successfully copied dataset: {original_repo} -> {new_repo}")
-            return
-        except Exception as dataset_error:
-            print(f"Dataset copy failed: {dataset_error}", file=sys.stderr)
+            print(f"Creating new repository {new_repo}...")
+            api.create_repo(repo_id=new_repo, repo_type="dataset", private=True, exist_ok=True)
 
-        print(f"Error: Could not find repository {original_repo} as either a model or dataset")
-        print("Make sure the repository name is correct and you have permission to access it.")
+            print(f"Uploading to {new_repo}...")
+            commit_msg = f"Copy of {original_repo}"
+            if commit_id:
+                commit_msg += f" at commit {commit_id}"
+            upload_folder(
+                folder_path=temp_dir, repo_id=new_repo, repo_type="dataset",
+                commit_message=commit_msg
+            )
+
+        copy_type = f"dataset at commit {commit_id}" if commit_id else "dataset"
+        print(f"Successfully copied {copy_type}: {original_repo} -> {new_repo}")
 
     except Exception as e:
         print(f"An error occurred: {e}", file=sys.stderr)
@@ -372,6 +350,7 @@ def hf():
     copy_parser = subparsers.add_parser('cp', help='Copy/duplicate a repository')
     copy_parser.add_argument('original_repo', help='Original repository name')
     copy_parser.add_argument('new_repo', help='New repository name')
+    copy_parser.add_argument('--commit', '--commit-id', dest='commit_id', help='Specific commit ID to copy from')
 
     concat_parser = subparsers.add_parser('concat', help='Concatenate multiple repositories into one')
     concat_parser.add_argument('main_repo', help='Main repository name to create')
@@ -400,7 +379,7 @@ def hf():
     elif args.subcommand == 'rm':
         hf_delete(args.repo_patterns)
     elif args.subcommand == 'cp':
-        hf_copy(args.original_repo, args.new_repo)
+        hf_copy(args.original_repo, args.new_repo, args.commit_id)
     elif args.subcommand == 'concat':
         hf_concat(args.main_repo, args.source_repos)
     elif args.subcommand == 'replace':
