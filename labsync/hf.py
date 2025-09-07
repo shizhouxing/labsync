@@ -121,6 +121,21 @@ def hf_replace(key, repo_A, repo_B):
     print(f"Successfully replaced column '{key}' in {repo_A}")
 
 
+def hf_split_train_test(repo_name, test_ratio):
+    """
+    Split a dataset into train and test splits
+    """
+    print(f"Loading dataset {repo_name}...")
+    dataset = load_dataset(repo_name)
+    assert len(dataset) == 1 and "train" in dataset
+    dataset = dataset["train"].train_test_split(test_size=test_ratio)
+    print(f"Uploading split dataset to {repo_name}...")
+    dataset.push_to_hub(
+        repo_name,
+        commit_message=f"Split dataset into train and test with ratio {test_ratio}",
+    )
+
+
 def hf_reset(repo_url, commit_id):
     """
     Reset a repository to a previous commit
@@ -266,7 +281,6 @@ def hf_ls():
 
         print(f"Fetching repository information for user: {username}\n")
 
-        # --- Process Models ---
         model_repos = api.list_models(author=username)
         model_data = []
         print("Analyzing model sizes...")
@@ -365,6 +379,10 @@ def hf():
     reset_parser.add_argument('repo_url', help='Repository name (e.g., username/repo-name)')
     reset_parser.add_argument('commit_id', help='Commit ID to reset to')
 
+    split_parser = subparsers.add_parser('split-train-test', help='Split dataset into train and test splits')
+    split_parser.add_argument('repo_name', help='Repository name to split')
+    split_parser.add_argument('test_ratio', type=float, help='Ratio for test split ')
+
     # Get the args starting from position 2
     hf_args = sys.argv[2:]
 
@@ -386,3 +404,5 @@ def hf():
         hf_replace(args.key, args.repo_A, args.repo_B)
     elif args.subcommand == 'reset':
         hf_reset(args.repo_url, args.commit_id)
+    elif args.subcommand == 'split-train-test':
+        hf_split_train_test(args.repo_name, args.test_ratio)
