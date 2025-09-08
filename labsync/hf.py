@@ -2,6 +2,7 @@ import sys
 import argparse
 import tempfile
 import fnmatch
+import os
 from huggingface_hub import HfApi, snapshot_download, upload_folder
 from huggingface_hub.errors import RepositoryNotFoundError
 from datasets import load_dataset, DatasetDict, concatenate_datasets
@@ -147,6 +148,24 @@ def hf_reset(repo_url, commit_id):
         repo_url,
         commit_message=f"Reset to commit {commit_id}",
         private=True
+    )
+
+
+def hf_upload(repo_path):
+    """
+    Upload a local repository to HuggingFace Hub.
+    """
+    api = HfApi()
+    username = api.whoami()["name"]
+    repo_name = os.path.basename(repo_path.rstrip('/'))
+    hf_repo_id = f"{username}/{repo_name}"
+    print(f"Uploading local repository: {repo_path}")
+    print(f"Target HuggingFace repository: {hf_repo_id}")
+    api.create_repo(repo_id=hf_repo_id, private=True, exist_ok=True)
+    upload_folder(
+        folder_path=repo_path,
+        repo_id=hf_repo_id,
+        commit_message=f"Upload local repository from {repo_path}"
     )
 
 
@@ -383,6 +402,9 @@ def hf():
     split_parser.add_argument('repo_name', help='Repository name to split')
     split_parser.add_argument('test_ratio', type=float, help='Ratio for test split ')
 
+    upload_parser = subparsers.add_parser('upload', help='Upload a local repository to HuggingFace Hub')
+    upload_parser.add_argument('repo_path', help='Path to the local repository to upload')
+
     # Get the args starting from position 2
     hf_args = sys.argv[2:]
 
@@ -406,3 +428,5 @@ def hf():
         hf_reset(args.repo_url, args.commit_id)
     elif args.subcommand == 'split-train-test':
         hf_split_train_test(args.repo_name, args.test_ratio)
+    elif args.subcommand == 'upload':
+        hf_upload(args.repo_path)

@@ -38,6 +38,7 @@ pip install -e .
 * **List repositories:** `lab hf ls` or use the shortcut `lab hf`
 * **Delete a repository:** `lab hf rm REPO_NAME`
 * **Copy a repository:** `lab hf cp ORIGINAL_REPO NEW_REPO`
+* **Upload a local repository:** `lab hf upload REPO_PATH`
 * **Concatenate multiple repositories:** `lab hf concat MAIN_REPO SOURCE_REPO1 SOURCE_REPO2 ...`
 * **Replace a column in one repository with values from another:** `lab hf replace COLUMN_NAME TARGET_REPO SOURCE_REPO`
 * **Reset a repository to a previous commit:** `lab hf reset REPO_NAME COMMIT_ID`
