@@ -92,10 +92,6 @@ def hf_replace(key, repo_A, repo_B):
             print(f"Error: Split '{split_name}' not found in source dataset {repo_B}")
             return
 
-        if key not in dataset_A[split_name].column_names:
-            print(f"Error: Column '{key}' not found in target dataset {repo_A} split '{split_name}'")
-            return
-
         if key not in dataset_B[split_name].column_names:
             print(f"Error: Column '{key}' not found in source dataset {repo_B} split '{split_name}'")
             return
@@ -107,7 +103,10 @@ def hf_replace(key, repo_A, repo_B):
     updated_splits = {}
     for split_name in dataset_A.keys():
         print(f"Replacing column '{key}' in split '{split_name}'...")
-        dataset_split = dataset_A[split_name].remove_columns([key])
+        if key in dataset_A[split_name].column_names:
+            dataset_split = dataset_A[split_name].remove_columns([key])
+        else:
+            dataset_split = dataset_A[split_name]
         dataset_split = dataset_split.add_column(key, dataset_B[split_name][key])
         updated_splits[split_name] = dataset_split
 
