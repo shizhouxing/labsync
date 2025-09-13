@@ -106,15 +106,15 @@ def get_gpu_jobs():
             gpu_count = 0
             gpu_type = 'generic'
 
-            tres_match = re.search(r'TRES=.*?gres/gpu[^,]*?:(\d+)', job_detail, re.IGNORECASE)
+            tres_match = re.search(r'TRES=.*?gres/gpu[^,]*?[:=](\d+)', job_detail, re.IGNORECASE)
             if tres_match:
                 gpu_count = int(tres_match.group(1))
             else:
                 patterns = [
-                    r'ReqTRES=.*?gres/gpu[^,]*?:(\d+)',
-                    r'AllocTRES=.*?gres/gpu[^,]*?:(\d+)',
-                    r'gres/gpu:(\d+)',
-                    r'Gres=.*?gpu[^,]*?:(\d+)'
+                    r'ReqTRES=.*?gres/gpu[^,]*?[:=](\d+)',
+                    r'AllocTRES=.*?gres/gpu[^,]*?[:=](\d+)',
+                    r'gres/gpu[:=](\d+)',
+                    r'Gres=.*?gpu[^,]*?[:=](\d+)'
                 ]
 
                 for pattern in patterns:
@@ -249,7 +249,7 @@ def get_allocated_gpus_per_node():
             tres_per_node_match = re.search(r'TresPerNode=([^,\s]+)', job_detail)
             if tres_per_node_match:
                 tres_info = tres_per_node_match.group(1)
-                gpu_match = re.search(r'gres[/:]gpu[^:]*:(\d+)', tres_info, re.IGNORECASE)
+                gpu_match = re.search(r'gres[/:]gpu[^:=]*[:=](\d+)', tres_info, re.IGNORECASE)
                 if gpu_match:
                     gpus_per_node = int(gpu_match.group(1))
                     for node in job_data['nodes']:
@@ -264,7 +264,7 @@ def get_allocated_gpus_per_node():
                     # Look for specific node mentions in the job details
                     for node in job_data['nodes']:
                         # Check if this specific node is mentioned with GPU allocation
-                        node_pattern = rf'{re.escape(node)}.*?gres/gpu[^:]*:(\d+)'
+                        node_pattern = rf'{re.escape(node)}.*?gres/gpu[^:=]*[:=](\d+)'
                         node_match = re.search(node_pattern, job_detail, re.IGNORECASE)
                         if node_match:
                             node_gpu_allocation[node] = int(node_match.group(1))
