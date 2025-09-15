@@ -13,14 +13,15 @@ logger = logging.getLogger(__name__)
 def get_global_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', type=str, default='listen',
-                        choices=['listen', 'init', 'tex', 
-                                'google-drive', 'gd', 'cluster', 'ls', 'jobs', 'kill', 'hf'],
+                        choices=['listen', 'init', 'tex',
+                                'google-drive', 'gd', 'cluster', 'ls', 'jobs', 'kill', 'bash', 'hf'],
                         nargs='?', help='Command of this run')
     shortcuts = {
         'gd': 'google-drive',
         'ls': 'cluster ls',
         'jobs': 'cluster jobs',
         'kill': 'cluster kill',
+        'bash': 'cluster bash',
         'hf': 'hf ls'
     }
     return parser, shortcuts
@@ -28,8 +29,8 @@ def get_global_parser():
 def cli_main():
     parser, shortcuts = get_global_parser()
     args, _ = parser.parse_known_args()
-    # Apply shortcuts - special handling for kill which needs arguments
-    if args.command in shortcuts and (len(sys.argv) == 2 or args.command == 'kill'):
+    # Apply shortcuts - special handling for kill and bash which need arguments
+    if args.command in shortcuts and (len(sys.argv) == 2 or args.command in ['kill', 'bash']):
         expanded = shortcuts[args.command]
         if ' ' in expanded:
             # Handle commands with subcommands like 'cluster ls'

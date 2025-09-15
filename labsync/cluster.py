@@ -443,6 +443,11 @@ def cluster_kill(args):
         print(f"Killed job {job_id}")
 
 
+def cluster_bash(args):
+    cmd = f"srun --jobid {args.job_id} --pty bash"
+    subprocess.run(cmd, shell=True)
+
+
 def get_parser():
     parser = argparse.ArgumentParser(prog='labsync cluster')
     subparsers = parser.add_subparsers(dest='subcommand', help='Cluster shortcuts')
@@ -452,6 +457,8 @@ def get_parser():
     kill_parser = subparsers.add_parser('kill', help='Kill slurm jobs by ID range')
     kill_parser.add_argument('start_job_id', type=int, help='Start job ID')
     kill_parser.add_argument('end_job_id', type=int, help='End job ID')
+    bash_parser = subparsers.add_parser('bash', help='Connect to a job with bash')
+    bash_parser.add_argument('job_id', type=int, help='Job ID to connect to')
 
     return parser
 
@@ -466,5 +473,7 @@ def cluster():
         cluster_jobs(args)
     elif args.subcommand == 'kill':
         cluster_kill(args)
+    elif args.subcommand == 'bash':
+        cluster_bash(args)
     else:
         parser.print_help()
