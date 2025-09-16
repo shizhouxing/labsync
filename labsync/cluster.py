@@ -444,7 +444,16 @@ def cluster_kill(args):
 
 
 def cluster_bash(args):
-    cmd = f"srun --jobid {args.job_id} --pty bash"
+    gpu_jobs = get_gpu_jobs()
+    job_id = str(args.job_id)
+    gpu_count = 0
+    if job_id in gpu_jobs:
+        gpu_count = gpu_jobs[job_id]['gpu_count']
+    if gpu_count > 0:
+        cmd = f"srun --jobid {args.job_id} --gpus {gpu_count} --pty bash"
+    else:
+        cmd = f"srun --jobid {args.job_id} --pty bash"
+    print(f"Running: {cmd}")
     subprocess.run(cmd, shell=True)
 
 
