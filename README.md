@@ -26,8 +26,9 @@ pip install -e .
 
 **Commands:**
 * **View GPU status and usage:** `lab cluster ls` or use the shortcut `lab ls`
-* **List your SLURM jobs:** `lab cluster jobs`
-* **Kill SLURM jobs by ID range:** `lab cluster kill START_JOB_ID END_JOB_ID`
+* **List your SLURM jobs:** `lab cluster jobs` or use the shortcut `lab jobs`
+* **Kill SLURM jobs by ID range:** `lab cluster kill START_JOB_ID END_JOB_ID` or use the shortcut `lab kill START_JOB_ID END_JOB_ID`
+* **Connect to a job with bash:** `lab cluster bash JOB_ID` or use the shortcut `lab bash JOB_ID`
 
 ## HuggingFace
 
@@ -37,11 +38,13 @@ pip install -e .
 **Commands:**
 * **List repositories:** `lab hf ls` or use the shortcut `lab hf`
 * **Delete a repository:** `lab hf rm REPO_NAME`
-* **Copy a repository:** `lab hf cp ORIGINAL_REPO NEW_REPO`
+* **Copy a repository:** `lab hf cp ORIGINAL_REPO NEW_REPO [--commit COMMIT_ID]`
+* **Rename/move a repository:** `lab hf mv ORIGINAL_REPO NEW_REPO`
 * **Upload a local repository:** `lab hf upload REPO_PATH`
 * **Concatenate multiple repositories:** `lab hf concat MAIN_REPO SOURCE_REPO1 SOURCE_REPO2 ...`
 * **Replace a column in one repository with values from another:** `lab hf replace COLUMN_NAME TARGET_REPO SOURCE_REPO`
 * **Reset a repository to a previous commit:** `lab hf reset REPO_NAME COMMIT_ID`
+* **Split dataset into train and test:** `lab hf split-train-test REPO_NAME TEST_RATIO`
 
 ## LaTeX Tools
 

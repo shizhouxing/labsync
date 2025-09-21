@@ -7,6 +7,7 @@ from huggingface_hub import HfApi, snapshot_download, upload_folder
 from huggingface_hub.errors import RepositoryNotFoundError
 from datasets import load_dataset, DatasetDict, concatenate_datasets
 
+
 def get_repo_size(repo_info):
     """Calculates the total size of a repository from its file metadata."""
     size_in_bytes = 0
@@ -15,6 +16,7 @@ def get_repo_size(repo_info):
             if file.size:
                 size_in_bytes += file.size
     return size_in_bytes
+
 
 def format_size(size_in_bytes):
     """Converts bytes to a human-readable format."""
@@ -168,42 +170,86 @@ def hf_upload(repo_path):
     )
 
 
-def hf_copy(original_repo, new_repo, commit_id=None):
+def _ensure_username_prefix(repo_name):
+    """
+    Helper function to ensure repository name has username prefix.
+    If no username is provided, adds the current user's username.
+    """
+    if '/' not in repo_name:
+        api = HfApi()
+        username = api.whoami()["name"]
+        return f"{username}/{repo_name}"
+    return repo_name
+
+
+def _get_repo_type(repo_id):
+    """
+    Helper function to determine if a repository is a model or dataset.
+    Returns "model" or "dataset", or raises an exception if not found.
+    """
+    api = HfApi()
+    try:
+        # Try to get model info first
+        api.model_info(repo_id=repo_id)
+        return "model"
+    except:
+        try:
+            # If model fails, try dataset
+            api.dataset_info(repo_id=repo_id)
+            return "dataset"
+        except:
+            raise ValueError(f"Repository {repo_id} not found or inaccessible")
+
+
+def hf_cp(original_repo, new_repo, commit_id=None):
     """
     Duplicates a repository under the authenticated user's name.
     """
-    try:
-        api = HfApi()
+    api = HfApi()
 
-        if commit_id:
-            print(f"Copying repository from {original_repo} to {new_repo} at commit {commit_id}")
-        else:
-            print(f"Copying repository from {original_repo} to {new_repo}")
+    # Ensure repo names have username prefixes for display
+    original_repo_full = _ensure_username_prefix(original_repo)
+    new_repo_full = _ensure_username_prefix(new_repo)
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            snapshot_download(
-                repo_id=original_repo, repo_type="dataset",
-                local_dir=temp_dir, local_dir_use_symlinks=False, revision=commit_id
-            )
+    # Detect the repository type
+    repo_type = _get_repo_type(original_repo_full)
 
-            print(f"Creating new repository {new_repo}...")
-            api.create_repo(repo_id=new_repo, repo_type="dataset", private=True, exist_ok=True)
+    if commit_id:
+        print(f"Copying {repo_type} repository from {original_repo_full} to {new_repo_full} at commit {commit_id}")
+        commit_msg = f"Copy of {original_repo_full} at commit {commit_id}"
+    else:
+        print(f"Copying {repo_type} repository from {original_repo_full} to {new_repo_full}")
+        commit_msg = f"Copy of {original_repo_full}"
 
-            print(f"Uploading to {new_repo}...")
-            commit_msg = f"Copy of {original_repo}"
-            if commit_id:
-                commit_msg += f" at commit {commit_id}"
-            upload_folder(
-                folder_path=temp_dir, repo_id=new_repo, repo_type="dataset",
-                commit_message=commit_msg
-            )
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print(f"Downloading {repo_type} {original_repo_full}...")
+        snapshot_download(
+            repo_id=original_repo_full, repo_type=repo_type,
+            local_dir=temp_dir, local_dir_use_symlinks=False, revision=commit_id
+        )
+        print(f"Creating new {repo_type} repository {new_repo_full}...")
+        api.create_repo(repo_id=new_repo_full, repo_type=repo_type, private=True, exist_ok=True)
+        print(f"Uploading to {new_repo_full}...")
+        upload_folder(
+            folder_path=temp_dir, repo_id=new_repo_full, repo_type=repo_type,
+            commit_message=commit_msg
+        )
 
-        copy_type = f"dataset at commit {commit_id}" if commit_id else "dataset"
-        print(f"Successfully copied {copy_type}: {original_repo} -> {new_repo}")
+    copy_type = f"{repo_type} at commit {commit_id}" if commit_id else repo_type
+    print(f"Successfully copied {copy_type}: {original_repo_full} -> {new_repo_full}")
 
-    except Exception as e:
-        print(f"An error occurred: {e}", file=sys.stderr)
-        print("Please ensure you are logged in with 'huggingface-cli login'.", file=sys.stderr)
+
+def hf_mv(original_repo, new_repo):
+    """
+    Renames a repository using HuggingFace Hub's move functionality.
+    """
+    api = HfApi()
+    original_repo_full = _ensure_username_prefix(original_repo)
+    new_repo_full = _ensure_username_prefix(new_repo)
+    repo_type = _get_repo_type(original_repo_full)
+    print(f"Renaming {repo_type} repository from {original_repo_full} to {new_repo_full}")
+    api.move_repo(from_id=original_repo_full, to_id=new_repo_full, repo_type=repo_type)
+    print(f"Successfully renamed {repo_type}: {original_repo_full} -> {new_repo_full}")
 
 
 def hf_delete(repo_patterns):
@@ -211,57 +257,51 @@ def hf_delete(repo_patterns):
     Deletes repository(ies) matching the patterns under the authenticated user's name.
     Supports glob patterns like 'rl_202504*' and multiple patterns.
     """
-    try:
-        api = HfApi()
-        username = api.whoami()["name"]
+    api = HfApi()
+    username = api.whoami()["name"]
 
-        print("Fetching repository list...")
-        all_repos = _get_all_repositories(api, username)
+    print("Fetching repository list...")
+    all_repos = _get_all_repositories(api, username)
 
-        matching_repos = set()
-        for pattern in repo_patterns:
-            for repo_name, repo_type in all_repos:
-                # Check if pattern matches the repo name (with or without username)
-                if fnmatch.fnmatch(repo_name, pattern) or fnmatch.fnmatch(repo_name.split('/')[-1], pattern):
-                    matching_repos.add((repo_name, repo_type))
+    matching_repos = set()
+    for pattern in repo_patterns:
+        for repo_name, repo_type in all_repos:
+            # Check if pattern matches the repo name (with or without username)
+            if fnmatch.fnmatch(repo_name, pattern) or fnmatch.fnmatch(repo_name.split('/')[-1], pattern):
+                matching_repos.add((repo_name, repo_type))
+    matching_repos = list(matching_repos)
 
-        matching_repos = list(matching_repos)
+    if not matching_repos:
+        print(f"No repositories found matching patterns: {', '.join(repo_patterns)}")
+        return
 
-        if not matching_repos:
-            print(f"No repositories found matching patterns: {', '.join(repo_patterns)}")
+    # Check if any patterns contain glob characters
+    has_glob_patterns = any('*' in pattern or '?' in pattern or '[' in pattern for pattern in repo_patterns)
+
+    print(f"\nFound {len(matching_repos)} repository(ies) matching patterns {repo_patterns}:")
+    print("-" * 81)
+    for repo_name, repo_type in sorted(matching_repos):
+        print(f"{repo_name:<70} ({repo_type})")
+    print("-" * 81)
+
+    # Only ask for confirmation if glob patterns are used
+    if has_glob_patterns:
+        confirm = input(f"\nAre you sure you want to delete these {len(matching_repos)} repository(ies)? (y/N): ").strip().lower()
+        if confirm != 'y':
+            print("Deletion cancelled.")
             return
 
-        # Check if any patterns contain glob characters
-        has_glob_patterns = any('*' in pattern or '?' in pattern or '[' in pattern for pattern in repo_patterns)
+    deleted_count = 0
+    for repo_name, repo_type in sorted(matching_repos):
+        try:
+            print(f"Deleting {repo_type}: {repo_name}...")
+            api.delete_repo(repo_id=repo_name, repo_type=repo_type)
+            print(f"Successfully deleted {repo_type}: {repo_name}")
+            deleted_count += 1
+        except Exception as e:
+            print(f"Failed to delete {repo_type} {repo_name}: {e}", file=sys.stderr)
 
-        print(f"\nFound {len(matching_repos)} repository(ies) matching patterns {repo_patterns}:")
-        print("-" * 81)
-        for repo_name, repo_type in sorted(matching_repos):
-            print(f"{repo_name:<70} ({repo_type})")
-        print("-" * 81)
-
-        # Only ask for confirmation if glob patterns are used
-        if has_glob_patterns:
-            confirm = input(f"\nAre you sure you want to delete these {len(matching_repos)} repository(ies)? (y/N): ").strip().lower()
-            if confirm != 'y':
-                print("Deletion cancelled.")
-                return
-
-        deleted_count = 0
-        for repo_name, repo_type in sorted(matching_repos):
-            try:
-                print(f"Deleting {repo_type}: {repo_name}...")
-                api.delete_repo(repo_id=repo_name, repo_type=repo_type)
-                print(f"Successfully deleted {repo_type}: {repo_name}")
-                deleted_count += 1
-            except Exception as e:
-                print(f"Failed to delete {repo_type} {repo_name}: {e}", file=sys.stderr)
-
-        print(f"\nDeleted {deleted_count} out of {len(matching_repos)} repositories.")
-
-    except Exception as e:
-        print(f"An error occurred: {e}", file=sys.stderr)
-        print("Please ensure you are logged in with 'huggingface-cli login'.", file=sys.stderr)
+    print(f"\nDeleted {deleted_count} out of {len(matching_repos)} repositories.")
 
 
 def _get_all_repositories(api, username):
@@ -269,23 +309,10 @@ def _get_all_repositories(api, username):
     Get all repositories (models and datasets) for a user.
     Returns a list of tuples: (repo_name, repo_type)
     """
-    repositories = []
-
-    try:
-        model_repos = api.list_models(author=username)
-        for model in model_repos:
-            repositories.append((model.modelId, "model"))
-    except Exception as e:
-        print(f"Warning: Could not fetch models: {e}", file=sys.stderr)
-
-    try:
-        dataset_repos = api.list_datasets(author=username)
-        for dataset in dataset_repos:
-            repositories.append((dataset.id, "dataset"))
-    except Exception as e:
-        print(f"Warning: Could not fetch datasets: {e}", file=sys.stderr)
-
-    return repositories
+    return (
+        [(model.modelId, "model") for model in api.list_models(author=username)]
+        + [(dataset.id, "dataset") for dataset in api.list_datasets(author=username)]
+    )
 
 
 def hf_ls():
@@ -369,6 +396,7 @@ def hf_ls():
         print(f"An error occurred: {e}", file=sys.stderr)
         print("Please ensure you are logged in with 'huggingface-cli login'.", file=sys.stderr)
 
+
 def hf():
     """Handle HuggingFace commands."""
     parser = argparse.ArgumentParser(prog='lab hf', description='HuggingFace utilities')
@@ -383,6 +411,10 @@ def hf():
     copy_parser.add_argument('original_repo', help='Original repository name')
     copy_parser.add_argument('new_repo', help='New repository name')
     copy_parser.add_argument('--commit', '--commit-id', dest='commit_id', help='Specific commit ID to copy from')
+
+    mv_parser = subparsers.add_parser('mv', help='Rename/move a repository')
+    mv_parser.add_argument('original_repo', help='Original repository name')
+    mv_parser.add_argument('new_repo', help='New repository name')
 
     concat_parser = subparsers.add_parser('concat', help='Concatenate multiple repositories into one')
     concat_parser.add_argument('main_repo', help='Main repository name to create')
@@ -418,7 +450,9 @@ def hf():
     elif args.subcommand == 'rm':
         hf_delete(args.repo_patterns)
     elif args.subcommand == 'cp':
-        hf_copy(args.original_repo, args.new_repo, args.commit_id)
+        hf_cp(args.original_repo, args.new_repo, args.commit_id)
+    elif args.subcommand == 'mv':
+        hf_mv(args.original_repo, args.new_repo)
     elif args.subcommand == 'concat':
         hf_concat(args.main_repo, args.source_repos)
     elif args.subcommand == 'replace':
