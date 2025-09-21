@@ -1,21 +1,112 @@
 import os
 import sys
 import time
+import re
 import logging
 import argparse
-from .sync import Synchronizer
-from .fsevent import FSEventHandler
 from .server import Server
 from watchdog.observers import Observer
+from watchdog.events import (PatternMatchingEventHandler, DirCreatedEvent, FileCreatedEvent,
+                             DirModifiedEvent, FileModifiedEvent)
 from threading import Thread
 
+
 logger = logging.getLogger(__name__)
+
+
+class FSEventHandler(PatternMatchingEventHandler):
+    def __init__(self, synchronizer, patterns=None, ignore_patterns=None,
+                ignore_patterns_re=None):
+        super().__init__(patterns=patterns, ignore_patterns=ignore_patterns)
+        self.synchronizer = synchronizer
+        self.paused = False
+        if ignore_patterns_re is None:
+            self.ignore_patterns_re = []
+        else:
+            self.ignore_patterns_re = [
+                re.compile(pattern) for pattern in ignore_patterns_re]
+
+    def dispatch(self, event):
+        if self.paused:
+            pass
+        else:
+            for pattern in self.ignore_patterns_re:
+                if pattern.match(event.src_path):
+                    return
+            super().dispatch(event)
+
+    def on_moved(self, event):
+        self.synchronizer.mv(event.src_path, event.dest_path)
+
+    def on_created(self, event):
+        if isinstance(event, DirCreatedEvent):
+            self.synchronizer.mkdir(event.src_path)
+        elif isinstance(event, FileCreatedEvent):
+            self.synchronizer.upload(event.src_path)
+        else:
+            raise TypeError
+
+    def on_deleted(self, event):
+        # Ignore the deletion event.
+        pass
+
+    def on_modified(self, event):
+        if isinstance(event, DirModifiedEvent):
+            # Handle specific files in the directory,
+            # but not the directory itself
+            pass
+        elif isinstance(event, FileModifiedEvent):
+            self.synchronizer.upload(event.src_path)
+        else:
+            raise TypeError
+
+    def pause(self):
+        self.paused = True
+
+    def resume(self):
+        self.paused = False
+
+
+class Synchronizer:
+    def __init__(self, servers):
+        self.servers = servers
+        for server in self.servers:
+            if not server.is_alive():
+                server.start()
+
+    def _add_task(self, task):
+        for server in self.servers:
+            server.add_task(task)
+
+    def _parse_path(self, path):
+        return os.path.relpath(path)
+
+    def upload(self, path):
+        self._add_task({
+            'action': 'upload',
+            'path': self._parse_path(path)
+        })
+
+    def mkdir(self, path):
+        self._add_task({
+            'action': 'mkdir',
+            'path': self._parse_path(path)
+        })
+
+    def mv(self, src_path, dest_path):
+        self._add_task({
+            'action': 'mv',
+            'src_path': self._parse_path(src_path),
+            'dest_path': self._parse_path(dest_path)
+        })
+
 
 def get_parser():
     parser = argparse.ArgumentParser(prog='lab listen')
     parser.add_argument('--path', '-p', type=str, default=None,
                         help='Path of the working directory on remote servers')
     return parser
+
 
 class WatchFS(Thread):
     def __init__(self, config):
