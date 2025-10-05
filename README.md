@@ -6,7 +6,6 @@ A development toolkit designed for university lab servers. Key functionalities i
 - **HuggingFace Shortcuts**: Shortcuts for working with HuggingFace repositories.
 - **LaTeX Tools**: Build and manage LaTeX documents with Git integration
 - **Google Drive Integration**: Upload files directly to Google Drive
-- File Synchronization (deprecated): Monitor local file changes and synchronize them to multiple remote servers
 
 ## Getting Started
 
@@ -80,20 +79,3 @@ lab gd -r PATH
 ```
 This archives the directory and uploads the compressed file.
 
-## File Synchronization
-
-*(This functionality is not sufficiently documented and is no longer maintained as of 2025.)*
-
-When using it for the first time, run:
-```bash
-lab init
-```
-This creates a configuration file at `~/.labsync.config.json` with your server details.
-
-Start monitoring local changes and synchronizing them to remote servers:
-```bash
-lab [OPTIONS]
-```
-
-**Options:**
-- `-p PATH` - Specify the working directory on remote servers (relative to the default server path)
