@@ -27,8 +27,8 @@ def get_global_parser():
 def cli_main():
     parser, shortcuts = get_global_parser()
     args, _ = parser.parse_known_args()
-    # Apply shortcuts - special handling for kill and bash which need arguments
-    if args.command in shortcuts and (len(sys.argv) == 2 or args.command in ['kill', 'bash']):
+    # Apply shortcuts
+    if args.command in shortcuts:
         expanded = shortcuts[args.command]
         if ' ' in expanded:
             # Handle commands with subcommands like 'cluster ls'
