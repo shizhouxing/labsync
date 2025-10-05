@@ -19,9 +19,66 @@ client_config_file = os.path.join(user_data_dir, 'client_secrets.json')
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', action='store_true')
+    parser.add_argument('-r', action='store_true', help='Upload directory (will be archived)')
+    parser.add_argument('--folder', type=str, default=None, help='Folder ID or folder name to upload to')
     parser.add_argument('files', type=str, nargs='+', help='File path')
     return parser
+
+
+def find_shared_drive_by_name(drive, drive_name):
+    """Find shared drive by name and return its ID."""
+    try:
+        from googleapiclient.discovery import build
+        service = build('drive', 'v3', credentials=drive.auth.credentials)
+        results = service.drives().list(pageSize=100).execute()
+        drives = results.get('drives', [])
+
+        matches = [d for d in drives if drive_name.lower() in d['name'].lower()]
+
+        if not matches:
+            return None, None
+
+        if len(matches) > 1:
+            print(f'Warning: Multiple shared drives found matching "{drive_name}":')
+            for idx, d in enumerate(matches):
+                print(f'  [{idx}] {d["name"]} (ID: {d["id"]})')
+            choice = input('Enter index to select, or press Enter to use first: ').strip()
+            if choice.isdigit() and 0 <= int(choice) < len(matches):
+                selected = matches[int(choice)]
+                return selected['id'], selected['name']
+            return matches[0]['id'], matches[0]['name']
+
+        return matches[0]['id'], matches[0]['name']
+    except Exception as e:
+        print(f'Error searching shared drives: {e}')
+        return None, None
+
+
+def find_folder_by_name(drive, folder_name):
+    """Find folder in My Drive and shared drives by name and return its ID."""
+    query = f"title='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    params = {
+        'q': query,
+        'corpora': 'allDrives',
+        'includeItemsFromAllDrives': True,
+        'supportsAllDrives': True
+    }
+    file_list = drive.ListFile(params).GetList()
+
+    if not file_list:
+        return None
+
+    if len(file_list) > 1:
+        print(f'Warning: Multiple folders found with name "{folder_name}":')
+        for idx, f in enumerate(file_list):
+            location = f.get('driveId', 'My Drive')
+            print(f'  [{idx}] {f["title"]} (ID: {f["id"]}, Location: {location})')
+        choice = input('Enter index to select, or press Enter to use first: ').strip()
+        if choice.isdigit() and 0 <= int(choice) < len(file_list):
+            return file_list[int(choice)]['id']
+        return file_list[0]['id']
+
+    return file_list[0]['id']
 
 
 def authenticate():
@@ -91,6 +148,25 @@ def google_drive():
     drive = GoogleDrive(gauth)
     print('Authentication successful')
 
+    folder_id = None
+    drive_id = None
+    if args.folder:
+        if '/' in args.folder or len(args.folder) > 50:
+            folder_id = args.folder
+            print(f'Using folder ID: {folder_id}')
+        else:
+            print(f'Searching for shared drive or folder: {args.folder}')
+            drive_id, drive_name = find_shared_drive_by_name(drive, args.folder)
+            if drive_id:
+                print(f'Found shared drive "{drive_name}" (ID: {drive_id})')
+            else:
+                folder_id = find_folder_by_name(drive, args.folder)
+                if folder_id:
+                    print(f'Found folder ID: {folder_id}')
+                else:
+                    print(f'Error: Shared drive or folder "{args.folder}" not found')
+                    return
+
     for file in args.files:
         if file.endswith('/'):
             file = file[:-1]
@@ -114,10 +190,26 @@ def google_drive():
             file_size = os.path.getsize(path)
             print(f'Uploading file: {path} ({file_size} bytes)...')
 
-        file = drive.CreateFile({'title': os.path.basename(path)})
+        metadata = {
+            'title': os.path.basename(path),
+            'supportsAllDrives': True
+        }
+        if drive_id:
+            metadata['parents'] = [{'kind': 'drive#driveId', 'id': drive_id}]
+            metadata['driveId'] = drive_id
+        elif folder_id:
+            metadata['parents'] = [{'id': folder_id}]
+
+        file = drive.CreateFile(metadata)
         file.SetContentFile(path)
-        file.Upload()
-        print(f'Successfully uploaded {path} to Google Drive')
+        file.Upload(param={'supportsAllDrives': True})
+
+        if drive_id:
+            print(f'Successfully uploaded {path} to shared drive')
+        elif folder_id:
+            print(f'Successfully uploaded {path} to Google Drive folder')
+        else:
+            print(f'Successfully uploaded {path} to Google Drive (My Drive)')
 
         if isdir or path.startswith('/tmp/'):
             assert path.endswith('.tgz')
