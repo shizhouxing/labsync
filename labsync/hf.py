@@ -6,6 +6,7 @@ import os
 from huggingface_hub import HfApi, snapshot_download, upload_folder
 from huggingface_hub.errors import RepositoryNotFoundError
 from datasets import load_dataset, DatasetDict, concatenate_datasets
+from .config import get_config_value
 
 
 def get_repo_size(repo_info):
@@ -150,6 +151,63 @@ def hf_reset(repo_url, commit_id):
         commit_message=f"Reset to commit {commit_id}",
         private=True
     )
+
+
+def hf_pull(pattern=None):
+    """
+    Pull repositories from HuggingFace Hub to checkpoint directory.
+    If pattern is provided, only pull repos matching the pattern.
+    Otherwise, pull all repos.
+    """
+    api = HfApi()
+    username = api.whoami()["name"]
+    checkpoint_path = get_config_value('checkpoint_path')
+
+    print(f"Fetching repository list for user: {username}")
+    all_repos = _get_all_repositories(api, username)
+
+    # Filter by pattern if provided
+    repos_to_pull = []
+    if pattern:
+        for repo_name, repo_type in all_repos:
+            repo_short_name = repo_name.split('/')[-1]
+            if fnmatch.fnmatch(repo_name, pattern) or fnmatch.fnmatch(repo_short_name, pattern):
+                repos_to_pull.append((repo_name, repo_type))
+    else:
+        repos_to_pull = all_repos
+
+    if not repos_to_pull:
+        if pattern:
+            print(f"No repositories found matching pattern: {pattern}")
+        else:
+            print("No repositories found.")
+        return
+
+    print(f"\nFound {len(repos_to_pull)} repository(ies) to pull:")
+    print("-" * 81)
+    for repo_name, repo_type in sorted(repos_to_pull):
+        print(f"{repo_name:<70} ({repo_type})")
+    print("-" * 81)
+
+    for repo_name, repo_type in sorted(repos_to_pull):
+        repo_short_name = repo_name.split('/')[-1]
+        local_path = os.path.join(checkpoint_path, repo_short_name)
+
+        print(f"\nPulling {repo_type}: {repo_name}")
+        print(f"  Destination: {local_path}")
+
+        try:
+            snapshot_download(
+                repo_id=repo_name,
+                repo_type=repo_type,
+                local_dir=local_path,
+                local_dir_use_symlinks=False
+            )
+            print(f"  Successfully pulled {repo_name}")
+        except Exception as e:
+            print(f"  Failed to pull {repo_name}: {e}", file=sys.stderr)
+
+    print(f"\nPull completed. Downloaded to: {checkpoint_path}")
 
 
 def hf_upload(repo_path):
@@ -436,6 +494,9 @@ def hf():
     upload_parser = subparsers.add_parser('upload', help='Upload a local repository to HuggingFace Hub')
     upload_parser.add_argument('repo_path', help='Path to the local repository to upload')
 
+    pull_parser = subparsers.add_parser('pull', help='Pull repositories from HuggingFace Hub to checkpoint directory')
+    pull_parser.add_argument('pattern', nargs='?', default=None, help='Optional pattern to filter repositories (supports glob patterns)')
+
     # Get the args starting from position 2
     hf_args = sys.argv[2:]
 
@@ -463,3 +524,5 @@ def hf():
         hf_split_train_test(args.repo_name, args.test_ratio)
     elif args.subcommand == 'upload':
         hf_upload(args.repo_path)
+    elif args.subcommand == 'pull':
+        hf_pull(args.pattern)
