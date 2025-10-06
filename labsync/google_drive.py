@@ -3,9 +3,11 @@ import logging
 import argparse
 import os
 import json
+from multiprocessing import Pool
 from .utils import user_data_dir
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+from tqdm import tqdm
 
 
 # silence error message "file_cache is only supported with oauth2client<4.0.0"
@@ -20,9 +22,30 @@ client_config_file = os.path.join(user_data_dir, 'client_secrets.json')
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', action='store_true', help='Upload directory (will be archived)')
-    parser.add_argument('--folder', type=str, default=None, help='Folder ID or folder name to upload to')
+    parser.add_argument('-d', '--direct', action='store_true', help='Upload directory directly without archiving')
+    parser.add_argument('-f', '--folder', type=str, default=None, help='Folder ID or folder name to upload to')
+    parser.add_argument('-j', '--njobs', type=int, default=1, help='Number of parallel upload jobs (default: 1)')
+    parser.add_argument('-c', '--continue', dest='continue_upload', action='store_true', help='Skip files that already exist in destination')
     parser.add_argument('files', type=str, nargs='+', help='File path')
     return parser
+
+
+def _select_from_multiple_matches(matches, item_type, get_name, get_id, get_extra_info=None):
+    """Helper to handle user selection when multiple matches are found."""
+    if not matches:
+        return None
+
+    if len(matches) == 1:
+        return get_id(matches[0])
+
+    print(f'Warning: Multiple {item_type}s found:')
+    for idx, item in enumerate(matches):
+        extra = f', {get_extra_info(item)}' if get_extra_info else ''
+        print(f'  [{idx}] {get_name(item)} (ID: {get_id(item)}{extra})')
+    choice = input('Enter index to select, or press Enter to use first: ').strip()
+    if choice.isdigit() and 0 <= int(choice) < len(matches):
+        return get_id(matches[int(choice)])
+    return get_id(matches[0])
 
 
 def find_shared_drive_by_name(drive, drive_name):
@@ -38,17 +61,14 @@ def find_shared_drive_by_name(drive, drive_name):
         if not matches:
             return None, None
 
-        if len(matches) > 1:
-            print(f'Warning: Multiple shared drives found matching "{drive_name}":')
-            for idx, d in enumerate(matches):
-                print(f'  [{idx}] {d["name"]} (ID: {d["id"]})')
-            choice = input('Enter index to select, or press Enter to use first: ').strip()
-            if choice.isdigit() and 0 <= int(choice) < len(matches):
-                selected = matches[int(choice)]
-                return selected['id'], selected['name']
-            return matches[0]['id'], matches[0]['name']
-
-        return matches[0]['id'], matches[0]['name']
+        selected_id = _select_from_multiple_matches(
+            matches,
+            'shared drive',
+            lambda d: d['name'],
+            lambda d: d['id']
+        )
+        selected_name = next(d['name'] for d in matches if d['id'] == selected_id)
+        return selected_id, selected_name
     except Exception as e:
         print(f'Error searching shared drives: {e}')
         return None, None
@@ -56,29 +76,234 @@ def find_shared_drive_by_name(drive, drive_name):
 
 def find_folder_by_name(drive, folder_name):
     """Find folder in My Drive and shared drives by name and return its ID."""
-    query = f"title='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-    params = {
-        'q': query,
+    file_list = drive.ListFile({
+        'q': f"title='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false",
         'corpora': 'allDrives',
         'includeItemsFromAllDrives': True,
         'supportsAllDrives': True
-    }
-    file_list = drive.ListFile(params).GetList()
+    }).GetList()
 
     if not file_list:
         return None
 
-    if len(file_list) > 1:
-        print(f'Warning: Multiple folders found with name "{folder_name}":')
-        for idx, f in enumerate(file_list):
-            location = f.get('driveId', 'My Drive')
-            print(f'  [{idx}] {f["title"]} (ID: {f["id"]}, Location: {location})')
-        choice = input('Enter index to select, or press Enter to use first: ').strip()
-        if choice.isdigit() and 0 <= int(choice) < len(file_list):
-            return file_list[int(choice)]['id']
-        return file_list[0]['id']
+    return _select_from_multiple_matches(
+        file_list,
+        'folder',
+        lambda f: f['title'],
+        lambda f: f['id'],
+        lambda f: f'Location: {f.get("driveId", "My Drive")}'
+    )
 
-    return file_list[0]['id']
+
+def file_exists_in_drive(drive, filename, parent_id=None, drive_id=None):
+    """Check if a file with the given name already exists in the destination."""
+    query = f"title='{filename}' and trashed=false"
+    if parent_id:
+        query += f" and '{parent_id}' in parents"
+    elif drive_id:
+        query += f" and '{drive_id}' in parents"
+
+    file_list = drive.ListFile({
+        'q': query,
+        'corpora': 'allDrives',
+        'includeItemsFromAllDrives': True,
+        'supportsAllDrives': True
+    }).GetList()
+    return len(file_list) > 0
+
+
+def create_folder(drive, folder_name, parent_id=None, drive_id=None):
+    """Create a folder in Google Drive and return its ID."""
+    metadata = {
+        'title': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder',
+        'supportsAllDrives': True
+    }
+    if drive_id:
+        metadata['parents'] = [{'kind': 'drive#driveId', 'id': drive_id}]
+        metadata['driveId'] = drive_id
+    elif parent_id:
+        metadata['parents'] = [{'id': parent_id}]
+
+    folder = drive.CreateFile(metadata)
+    folder.Upload(param={'supportsAllDrives': True})
+    return folder['id']
+
+
+class ProgressFileWrapper:
+    """Wrapper for file object that reports progress."""
+    def __init__(self, file_path, pbar):
+        self.file_path = file_path
+        self.pbar = pbar
+        self.file = open(file_path, 'rb')
+
+    def read(self, size=-1):
+        data = self.file.read(size)
+        self.pbar.update(len(data))
+        return data
+
+    def seek(self, offset, whence=0):
+        return self.file.seek(offset, whence)
+
+    def tell(self):
+        return self.file.tell()
+
+    def close(self):
+        self.file.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+
+def upload_file_with_progress(drive_file, file_path):
+    """Upload a file with progress bar."""
+    file_size = os.path.getsize(file_path)
+
+    with tqdm(total=file_size, unit='B', unit_scale=True, desc=os.path.basename(file_path)) as pbar:
+        with ProgressFileWrapper(file_path, pbar) as wrapped_file:
+            drive_file.content = wrapped_file
+            drive_file.Upload(param={'supportsAllDrives': True})
+
+
+def upload_directory_direct(drive, local_path, parent_id=None, drive_id=None, continue_upload=False):
+    """Recursively upload a directory and its contents to Google Drive."""
+    dir_name = os.path.basename(local_path)
+
+    if continue_upload and file_exists_in_drive(drive, dir_name, parent_id, drive_id):
+        query = f"title='{dir_name}' and trashed=false"
+        if parent_id:
+            query += f" and '{parent_id}' in parents"
+        elif drive_id:
+            query += f" and '{drive_id}' in parents"
+        file_list = drive.ListFile({
+            'q': query,
+            'corpora': 'allDrives',
+            'includeItemsFromAllDrives': True,
+            'supportsAllDrives': True
+        }).GetList()
+        folder_id = file_list[0]['id']
+
+        items_to_upload = []
+        for item in os.listdir(local_path):
+            if not file_exists_in_drive(drive, item, folder_id, None):
+                items_to_upload.append(item)
+
+        if not items_to_upload:
+            print(f'Skipping folder {dir_name} (all files already exist)')
+            return folder_id
+
+        print(f'Folder exists: {dir_name}, uploading {len(items_to_upload)} remaining files...')
+    else:
+        print(f'Creating folder: {dir_name}')
+        folder_id = create_folder(drive, dir_name, parent_id, drive_id)
+
+    for item in os.listdir(local_path):
+        item_path = os.path.join(local_path, item)
+
+        if os.path.isdir(item_path):
+            upload_directory_direct(drive, item_path, folder_id, None, continue_upload)
+        else:
+            if continue_upload and file_exists_in_drive(drive, item, folder_id, None):
+                print(f'Skipping {item} (already exists)')
+                continue
+            file = drive.CreateFile({
+                'title': item,
+                'parents': [{'id': folder_id}],
+                'supportsAllDrives': True
+            })
+            upload_file_with_progress(file, item_path)
+
+    return folder_id
+
+
+def upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id, continue_upload=False):
+    """Upload a single file or directory to Google Drive."""
+    if file.endswith('/'):
+        file = file[:-1]
+
+    if not os.path.exists(file):
+        return f'Error: File {file} does not exist'
+
+    isdir = os.path.isdir(file)
+    if isdir:
+        if use_direct:
+            upload_directory_direct(drive, file, folder_id, drive_id, continue_upload)
+            if drive_id:
+                return f'Successfully uploaded directory {file} to shared drive'
+            elif folder_id:
+                return f'Successfully uploaded directory {file} to Google Drive folder'
+            else:
+                return f'Successfully uploaded directory {file} to Google Drive (My Drive)'
+        elif not use_archive:
+            return f'Skipping directory {file}'
+
+        file_z = os.path.abspath(f'{os.path.basename(file)}.tgz')
+        os.system(f'cd {file} && tar -czvf {file_z} *')
+        path = file_z
+    else:
+        path = file
+
+    if continue_upload and file_exists_in_drive(drive, os.path.basename(path), folder_id, drive_id):
+        if isdir:
+            os.system(f'rm {path}')
+        return f'Skipping {path} (already exists)'
+
+    metadata = {
+        'title': os.path.basename(path),
+        'supportsAllDrives': True
+    }
+    if drive_id:
+        metadata['parents'] = [{'kind': 'drive#driveId', 'id': drive_id}]
+        metadata['driveId'] = drive_id
+    elif folder_id:
+        metadata['parents'] = [{'id': folder_id}]
+
+    file_obj = drive.CreateFile(metadata)
+    upload_file_with_progress(file_obj, path)
+
+    if drive_id:
+        result = f'Successfully uploaded {path} to shared drive'
+    elif folder_id:
+        result = f'Successfully uploaded {path} to Google Drive folder'
+    else:
+        result = f'Successfully uploaded {path} to Google Drive (My Drive)'
+
+    if isdir or path.startswith('/tmp/'):
+        assert path.endswith('.tgz')
+        os.system(f'rm {path}')
+
+    return result
+
+
+def upload_worker(args_tuple):
+    """Worker function for multiprocessing upload."""
+    file, use_archive, use_direct, folder_id, drive_id, continue_upload = args_tuple
+
+    import webbrowser
+    webbrowser.get = lambda using=None: None
+    webbrowser.open = lambda url, new=0, autoraise=True: None
+
+    gauth = GoogleAuth()
+    gauth.settings['client_config_backend'] = 'file'
+    gauth.LoadClientConfigFile(client_config_file)
+    gauth.LoadCredentialsFile(credential_file)
+
+    if gauth.access_token_expired:
+        try:
+            gauth.Refresh()
+        except:
+            pass
+
+    gauth.Authorize()
+    drive = GoogleDrive(gauth)
+
+    try:
+        return upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id, continue_upload)
+    except Exception as e:
+        return f'Error uploading {file}: {str(e)}'
 
 
 def authenticate():
@@ -124,15 +349,30 @@ def authenticate():
         try:
             gauth.Refresh()
             print('Token refreshed successfully')
-        except: # pylint: disable=bare-except
+        except:
             print('Failed to refresh token. Re-authenticating...')
             import traceback; traceback.print_exc()
             gauth = GoogleAuth()
             gauth.LoadClientConfigFile(client_config_file)
             gauth.LocalWebserverAuth()
     else:
-        print('Using existing credentials')
-        gauth.Authorize()
+        from datetime import datetime, timedelta
+        if gauth.credentials.token_expiry:
+            time_until_expiry = gauth.credentials.token_expiry - datetime.now()
+            if time_until_expiry < timedelta(minutes=5):
+                print('Access token expiring soon. Refreshing...')
+                try:
+                    gauth.Refresh()
+                    print('Token refreshed successfully')
+                except:
+                    print('Using existing credentials')
+                    gauth.Authorize()
+            else:
+                print('Using existing credentials')
+                gauth.Authorize()
+        else:
+            print('Using existing credentials')
+            gauth.Authorize()
 
     gauth.SaveCredentialsFile(credential_file)
     print('Authentication complete')
@@ -167,51 +407,17 @@ def google_drive():
                     print(f'Error: Shared drive or folder "{args.folder}" not found')
                     return
 
-    for file in args.files:
-        if file.endswith('/'):
-            file = file[:-1]
+    print(f'Using {args.njobs} parallel jobs for upload')
 
-        if not os.path.exists(file):
-            print(f'Error: File {file} does not exist')
-            continue
+    gauth.SaveCredentialsFile(credential_file)
 
-        isdir = os.path.isdir(file)
-        if isdir:
-            if not args.r:
-                print(f'Skipping directory {file}')
-                continue
-            print(f'Archiving directory {file}...')
-            file_z = os.path.abspath(f'{os.path.basename(file)}.tgz')
-            os.system(f'cd {file} && tar -czvf {file_z} *')
-            path = file_z
-            print(f'Archive created: {path}')
-        else:
-            path = file
-            file_size = os.path.getsize(path)
-            print(f'Uploading file: {path} ({file_size} bytes)...')
+    upload_tasks = [
+        (file, args.r, args.direct, folder_id, drive_id, args.continue_upload)
+        for file in args.files
+    ]
+    with Pool(processes=args.njobs) as pool:
+        results = pool.map(upload_worker, upload_tasks)
 
-        metadata = {
-            'title': os.path.basename(path),
-            'supportsAllDrives': True
-        }
-        if drive_id:
-            metadata['parents'] = [{'kind': 'drive#driveId', 'id': drive_id}]
-            metadata['driveId'] = drive_id
-        elif folder_id:
-            metadata['parents'] = [{'id': folder_id}]
-
-        file = drive.CreateFile(metadata)
-        file.SetContentFile(path)
-        file.Upload(param={'supportsAllDrives': True})
-
-        if drive_id:
-            print(f'Successfully uploaded {path} to shared drive')
-        elif folder_id:
-            print(f'Successfully uploaded {path} to Google Drive folder')
-        else:
-            print(f'Successfully uploaded {path} to Google Drive (My Drive)')
-
-        if isdir or path.startswith('/tmp/'):
-            assert path.endswith('.tgz')
-            print(f'Cleaning up temporary file: {path}')
-            os.system(f'rm {path}')
+    for result in results:
+        print(result)
+    return

@@ -66,16 +66,12 @@ Use `lab gd` to upload files directly from servers to Google Drive. This feature
 
 **Note for remote servers:** If your system doesn't support interactive web browsers, the program will display a URL for manual authentication. Copy this URL and open it on your local machine. After authentication, you'll be redirected to a localhost callback URL. Return to the remote server and access this URL using `curl`.
 
-### Usage
+**Usage:** `lab gd [OPTIONS] PATH...`
 
-**Upload a single file:**
-```bash
-lab gd PATH
-```
-
-**Upload a directory:**
-```bash
-lab gd -r PATH
-```
-This archives the directory and uploads the compressed file.
+**Options:**
+* `-r`: Upload directory as archive
+* `-d, --direct`: Upload directory directly without archiving (preserves structure)
+* `-f, --folder FOLDER_NAME`: Upload to a specific folder or shared drive
+* `-j, --njobs NJOBS`: Number of parallel upload jobs (default: 1)
+* `-c, --continue`: Skip files that already exist in destination
 
