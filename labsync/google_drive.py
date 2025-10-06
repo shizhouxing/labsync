@@ -26,8 +26,17 @@ def get_parser():
     parser.add_argument('-f', '--folder', type=str, default=None, help='Folder ID or folder name to upload to')
     parser.add_argument('-j', '--njobs', type=int, default=1, help='Number of parallel upload jobs (default: 1)')
     parser.add_argument('-c', '--continue', dest='continue_upload', action='store_true', help='Skip files that already exist in destination')
+    parser.add_argument('--max-files', type=int, default=100, help='Maximum files in directory before auto-archiving (default: 100)')
     parser.add_argument('files', type=str, nargs='+', help='File path')
     return parser
+
+
+def _count_files_in_directory(path):
+    """Count total number of files in a directory recursively."""
+    count = 0
+    for root, dirs, files in os.walk(path):
+        count += len(files)
+    return count
 
 
 def _select_from_multiple_matches(matches, item_type, get_name, get_id, get_extra_info=None):
@@ -219,7 +228,7 @@ def upload_directory_direct(drive, local_path, parent_id=None, drive_id=None, co
     return folder_id
 
 
-def upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id, continue_upload=False):
+def upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id, continue_upload=False, max_files=100):
     """Upload a single file or directory to Google Drive."""
     if file.endswith('/'):
         file = file[:-1]
@@ -230,19 +239,27 @@ def upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id
     isdir = os.path.isdir(file)
     if isdir:
         if use_direct:
-            upload_directory_direct(drive, file, folder_id, drive_id, continue_upload)
-            if drive_id:
-                return f'Successfully uploaded directory {file} to shared drive'
-            elif folder_id:
-                return f'Successfully uploaded directory {file} to Google Drive folder'
+            file_count = _count_files_in_directory(file)
+            if file_count > max_files:
+                print(f'Directory {file} has {file_count} files (exceeds limit of {max_files}), switching to archive mode')
+                use_archive = True
+                use_direct = False
             else:
-                return f'Successfully uploaded directory {file} to Google Drive (My Drive)'
-        elif not use_archive:
+                upload_directory_direct(drive, file, folder_id, drive_id, continue_upload)
+                if drive_id:
+                    return f'Successfully uploaded directory {file} to shared drive'
+                elif folder_id:
+                    return f'Successfully uploaded directory {file} to Google Drive folder'
+                else:
+                    return f'Successfully uploaded directory {file} to Google Drive (My Drive)'
+
+        if not use_direct and not use_archive:
             return f'Skipping directory {file}'
 
-        file_z = os.path.abspath(f'{os.path.basename(file)}.tgz')
-        os.system(f'cd {file} && tar -czvf {file_z} *')
-        path = file_z
+        if use_archive:
+            file_z = os.path.abspath(f'{os.path.basename(file)}.tgz')
+            os.system(f'cd {file} && tar -czvf {file_z} *')
+            path = file_z
     else:
         path = file
 
@@ -280,7 +297,7 @@ def upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id
 
 def upload_worker(args_tuple):
     """Worker function for multiprocessing upload."""
-    file, use_archive, use_direct, folder_id, drive_id, continue_upload = args_tuple
+    file, use_archive, use_direct, folder_id, drive_id, continue_upload, max_files = args_tuple
 
     import webbrowser
     webbrowser.get = lambda using=None: None
@@ -301,7 +318,7 @@ def upload_worker(args_tuple):
     drive = GoogleDrive(gauth)
 
     try:
-        return upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id, continue_upload)
+        return upload_single_file(drive, file, use_archive, use_direct, folder_id, drive_id, continue_upload, max_files)
     except Exception as e:
         return f'Error uploading {file}: {str(e)}'
 
@@ -412,7 +429,7 @@ def google_drive():
     gauth.SaveCredentialsFile(credential_file)
 
     upload_tasks = [
-        (file, args.r, args.direct, folder_id, drive_id, args.continue_upload)
+        (file, args.r, args.direct, folder_id, drive_id, args.continue_upload, args.max_files)
         for file in args.files
     ]
     with Pool(processes=args.njobs) as pool:

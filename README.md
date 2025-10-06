@@ -74,4 +74,5 @@ Use `lab gd` to upload files directly from servers to Google Drive. This feature
 * `-f, --folder FOLDER_NAME`: Upload to a specific folder or shared drive
 * `-j, --njobs NJOBS`: Number of parallel upload jobs (default: 1)
 * `-c, --continue`: Skip files that already exist in destination
+* `--max-files N`: Auto-archive directories with more than N files (default: 100)
 
