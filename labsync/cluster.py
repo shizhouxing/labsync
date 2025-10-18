@@ -508,17 +508,7 @@ def get_parser():
     bash_parser = subparsers.add_parser('bash', help='Connect to a job with bash')
     bash_parser.add_argument('job_id', type=int, help='Job ID to connect to')
 
-    submit_parser = subparsers.add_parser('submit', help='Submit a SLURM job',
-                                           formatter_class=argparse.RawDescriptionHelpFormatter,
-                                           epilog='Example: lab cluster submit batch --gpus 2 --conda myenv -- python train.py --arg1 val1')
-    submit_parser.add_argument('partition', type=str, help='SLURM partition to submit to')
-    submit_parser.add_argument('--gpus', type=int, default=1, help='Number of GPUs (default: 1)')
-    submit_parser.add_argument('--cpus', type=int, default=16, help='Number of CPUs (default: 16)')
-    submit_parser.add_argument('--mem', type=str, default='128G', help='Memory allocation (default: 128G)')
-    submit_parser.add_argument('--conda', type=str, help='Conda environment to activate')
-    submit_parser.add_argument('--path', type=str, help='Additional PATH to prepend')
-    submit_parser.add_argument('--account', type=str, help='SLURM account')
-    submit_parser.add_argument('--dependency', type=str, help='Job dependency ID (job will run after this job completes)')
+    subparsers.add_parser('submit', help='Submit a SLURM job')
 
     return parser
 
@@ -530,7 +520,7 @@ def cluster():
         submit_parser = argparse.ArgumentParser(prog='labsync cluster submit')
         submit_parser.add_argument('partition', type=str)
         submit_parser.add_argument('--gpus', type=int, default=1)
-        submit_parser.add_argument('--cpus', type=int, default=16)
+        submit_parser.add_argument('--cpus', type=int, default=12)
         submit_parser.add_argument('--mem', type=str, default='128G')
         submit_parser.add_argument('--conda', type=str)
         submit_parser.add_argument('--path', type=str)
