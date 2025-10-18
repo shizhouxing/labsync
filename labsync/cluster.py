@@ -2,6 +2,7 @@ import argparse
 import sys
 import subprocess
 import re
+import os
 from datetime import datetime
 from collections import defaultdict
 
@@ -457,6 +458,44 @@ def cluster_bash(args):
     subprocess.run(cmd, shell=True)
 
 
+def cluster_submit(args):
+    os.makedirs('slurm', exist_ok=True)
+
+    command_str = ' '.join(args.command)
+
+    resources = f"--cpus-per-task={args.cpus} --gres=gpu:{args.gpus} --mem={args.mem}"
+
+    slurm_cmd = (f"sbatch -p {args.partition} {resources} "
+                 f"--output=slurm/slurm-%j.out --error=slurm/slurm-%j.out ")
+
+    if args.account:
+        slurm_cmd += f"--account {args.account} "
+
+    if args.dependency:
+        slurm_cmd += f"--dependency=afterok:{args.dependency} "
+
+    slurm_cmd += f"--wrap '"
+
+    if args.conda:
+        slurm_cmd += f"source ~/miniconda3/etc/profile.d/conda.sh; conda activate {args.conda}; "
+
+    if args.path:
+        slurm_cmd += f"export PATH={args.path}:$PATH; "
+
+    slurm_cmd += f"{command_str}'"
+
+    print(f"Submitting SLURM job: {slurm_cmd}")
+
+    result = subprocess.run(slurm_cmd, shell=True, capture_output=True, text=True)
+    if result.returncode == 0:
+        job_id = result.stdout.strip().split()[-1]
+        print(f"Submitted job {job_id}")
+        return job_id
+    else:
+        print(f"Error submitting job: {result.stderr}")
+        return None
+
+
 def get_parser():
     parser = argparse.ArgumentParser(prog='labsync cluster')
     subparsers = parser.add_subparsers(dest='subcommand', help='Cluster shortcuts')
@@ -469,20 +508,47 @@ def get_parser():
     bash_parser = subparsers.add_parser('bash', help='Connect to a job with bash')
     bash_parser.add_argument('job_id', type=int, help='Job ID to connect to')
 
+    submit_parser = subparsers.add_parser('submit', help='Submit a SLURM job',
+                                           formatter_class=argparse.RawDescriptionHelpFormatter,
+                                           epilog='Example: lab cluster submit batch --gpus 2 --conda myenv -- python train.py --arg1 val1')
+    submit_parser.add_argument('partition', type=str, help='SLURM partition to submit to')
+    submit_parser.add_argument('--gpus', type=int, default=1, help='Number of GPUs (default: 1)')
+    submit_parser.add_argument('--cpus', type=int, default=16, help='Number of CPUs (default: 16)')
+    submit_parser.add_argument('--mem', type=str, default='128G', help='Memory allocation (default: 128G)')
+    submit_parser.add_argument('--conda', type=str, help='Conda environment to activate')
+    submit_parser.add_argument('--path', type=str, help='Additional PATH to prepend')
+    submit_parser.add_argument('--account', type=str, help='SLURM account')
+    submit_parser.add_argument('--dependency', type=str, help='Job dependency ID (job will run after this job completes)')
+
     return parser
 
 
 def cluster():
     parser = get_parser()
-    args = parser.parse_args(sys.argv[2:])
 
-    if args.subcommand == 'ls':
-        cluster_ls(args)
-    elif args.subcommand == 'jobs':
-        cluster_jobs(args)
-    elif args.subcommand == 'kill':
-        cluster_kill(args)
-    elif args.subcommand == 'bash':
-        cluster_bash(args)
+    if len(sys.argv) > 2 and sys.argv[2] == 'submit':
+        submit_parser = argparse.ArgumentParser(prog='labsync cluster submit')
+        submit_parser.add_argument('partition', type=str)
+        submit_parser.add_argument('--gpus', type=int, default=1)
+        submit_parser.add_argument('--cpus', type=int, default=16)
+        submit_parser.add_argument('--mem', type=str, default='128G')
+        submit_parser.add_argument('--conda', type=str)
+        submit_parser.add_argument('--path', type=str)
+        submit_parser.add_argument('--account', type=str)
+        submit_parser.add_argument('--dependency', type=str)
+
+        args, command = submit_parser.parse_known_args(sys.argv[3:])
+        args.command = command
+        cluster_submit(args)
     else:
-        parser.print_help()
+        args = parser.parse_args(sys.argv[2:])
+        if args.subcommand == 'ls':
+            cluster_ls(args)
+        elif args.subcommand == 'jobs':
+            cluster_jobs(args)
+        elif args.subcommand == 'kill':
+            cluster_kill(args)
+        elif args.subcommand == 'bash':
+            cluster_bash(args)
+        else:
+            parser.print_help()
