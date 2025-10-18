@@ -31,15 +31,10 @@ def cli_main():
     if args.command in shortcuts:
         expanded = shortcuts[args.command]
         if ' ' in expanded:
-            # Only apply subcommand shortcuts if no additional args provided
-            if len(sys.argv) <= 2:
-                parts = expanded.split(' ', 1)
-                args.command = parts[0]
-                # Insert the subcommand into sys.argv
-                sys.argv.insert(2, parts[1])
-            else:
-                # Just expand the command, don't add subcommand
-                args.command = expanded.split(' ')[0]
+            parts = expanded.split(' ', 1)
+            args.command = parts[0]
+            # Insert the subcommand into sys.argv
+            sys.argv.insert(2, parts[1])
         else:
             args.command = expanded
     if args.command == 'tex':
