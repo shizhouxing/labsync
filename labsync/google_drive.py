@@ -3,11 +3,14 @@ import logging
 import argparse
 import os
 import json
+import time
 from multiprocessing import Pool
 from .utils import user_data_dir
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from tqdm import tqdm
+from googleapiclient.http import MediaFileUpload
+from googleapiclient.errors import HttpError
 
 
 # silence error message "file_cache is only supported with oauth2client<4.0.0"
@@ -168,13 +171,90 @@ class ProgressFileWrapper:
 
 
 def upload_file_with_progress(drive_file, file_path):
-    """Upload a file with progress bar."""
+    """Upload a file with progress bar using chunked resumable upload."""
+    from pydrive2.files import ApiRequestError
+    from googleapiclient import errors
+
     file_size = os.path.getsize(file_path)
+    chunk_size = 256 * 1024 * 1024
+
+    if drive_file.get('mimeType') is None:
+        drive_file['mimeType'] = 'application/octet-stream'
 
     with tqdm(total=file_size, unit='B', unit_scale=True, desc=os.path.basename(file_path)) as pbar:
-        with ProgressFileWrapper(file_path, pbar) as wrapped_file:
-            drive_file.content = wrapped_file
-            drive_file.Upload(param={'supportsAllDrives': True})
+        retries = 0
+        max_retries = 5
+
+        while retries < max_retries:
+            try:
+                media_body = MediaFileUpload(
+                    file_path,
+                    mimetype=drive_file['mimeType'],
+                    resumable=True,
+                    chunksize=chunk_size
+                )
+
+                param = {'supportsAllDrives': True}
+                param['body'] = drive_file.GetChanges()
+
+                if drive_file.uploaded or drive_file.get('id') is not None:
+                    request = drive_file.auth.service.files().update(
+                        fileId=drive_file['id'],
+                        media_body=media_body,
+                        **param
+                    )
+                else:
+                    request = drive_file.auth.service.files().insert(
+                        media_body=media_body,
+                        **param
+                    )
+
+                response = None
+                while response is None:
+                    status, response = request.next_chunk()
+                    if status:
+                        pbar.n = int(status.progress() * file_size)
+                        pbar.refresh()
+
+                drive_file.uploaded = True
+                drive_file.UpdateMetadata(response)
+                pbar.n = file_size
+                pbar.refresh()
+                break
+
+            except HttpError as e:
+                if e.resp.status in [500, 502, 503, 504]:
+                    retries += 1
+                    if retries < max_retries:
+                        wait_time = 2 ** retries
+                        pbar.write(f'Upload error (attempt {retries}/{max_retries}), retrying in {wait_time}s...')
+                        time.sleep(wait_time)
+                        pbar.n = 0
+                        pbar.refresh()
+                    else:
+                        raise ApiRequestError(e)
+                else:
+                    raise ApiRequestError(e)
+            except errors.HttpError as e:
+                retries += 1
+                if retries < max_retries:
+                    wait_time = 2 ** retries
+                    pbar.write(f'Connection error (attempt {retries}/{max_retries}), retrying in {wait_time}s...')
+                    time.sleep(wait_time)
+                    pbar.n = 0
+                    pbar.refresh()
+                else:
+                    raise ApiRequestError(e)
+            except Exception as e:
+                retries += 1
+                if retries < max_retries:
+                    wait_time = 2 ** retries
+                    pbar.write(f'Connection error (attempt {retries}/{max_retries}), retrying in {wait_time}s...')
+                    time.sleep(wait_time)
+                    pbar.n = 0
+                    pbar.refresh()
+                else:
+                    raise
 
 
 def upload_directory_direct(drive, local_path, parent_id=None, drive_id=None, continue_upload=False):
@@ -209,7 +289,18 @@ def upload_directory_direct(drive, local_path, parent_id=None, drive_id=None, co
         print(f'Creating folder: {dir_name}')
         folder_id = create_folder(drive, dir_name, parent_id, drive_id)
 
-    for item in os.listdir(local_path):
+    items = os.listdir(local_path)
+    items_with_sizes = []
+    for item in items:
+        item_path = os.path.join(local_path, item)
+        if os.path.isfile(item_path):
+            items_with_sizes.append((item, os.path.getsize(item_path)))
+        else:
+            items_with_sizes.append((item, 0))
+
+    sorted_items = [item for item, size in sorted(items_with_sizes, key=lambda x: x[1], reverse=True)]
+
+    for item in sorted_items:
         item_path = os.path.join(local_path, item)
 
         if os.path.isdir(item_path):
@@ -396,6 +487,21 @@ def authenticate():
     return gauth
 
 
+def _get_file_size(file_path):
+    """Get file size in bytes. For directories, return total size of all files."""
+    if os.path.isdir(file_path):
+        total_size = 0
+        for root, dirs, files in os.walk(file_path):
+            for f in files:
+                fp = os.path.join(root, f)
+                if os.path.exists(fp):
+                    total_size += os.path.getsize(fp)
+        return total_size
+    elif os.path.exists(file_path):
+        return os.path.getsize(file_path)
+    return 0
+
+
 def google_drive():
     """Currently only simple uploading is supported"""
     args = get_parser().parse_args(sys.argv[2:])
@@ -428,9 +534,11 @@ def google_drive():
 
     gauth.SaveCredentialsFile(credential_file)
 
+    sorted_files = sorted(args.files, key=_get_file_size, reverse=True)
+
     upload_tasks = [
         (file, args.r, args.direct, folder_id, drive_id, args.continue_upload, args.max_files)
-        for file in args.files
+        for file in sorted_files
     ]
     with Pool(processes=args.njobs) as pool:
         results = pool.map(upload_worker, upload_tasks)
