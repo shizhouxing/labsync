@@ -28,6 +28,21 @@ pip install -e .
 * **List your SLURM jobs:** `lab cluster jobs` or use the shortcut `lab jobs`
 * **Kill SLURM jobs by ID range:** `lab cluster kill START_JOB_ID END_JOB_ID` or use the shortcut `lab kill START_JOB_ID END_JOB_ID`
 * **Connect to a job with bash:** `lab cluster bash JOB_ID` or use the shortcut `lab bash JOB_ID`
+* **Submit a SLURM job:** `lab cluster submit PARTITION [OPTIONS] -- COMMAND`
+
+### Submit Job Options:
+* `--gpus N`: Number of GPUs to request (default: 1)
+* `--cpus N`: Number of CPUs per task (default: 12)
+* `--mem SIZE`: Memory to request (default: 128G)
+* `--conda ENV`: Conda environment to activate before running command
+* `--path PATH`: Prepend PATH to environment PATH variable
+* `--account ACCOUNT`: SLURM account to use
+* `--dependency JOB_ID`: Job dependency (runs after specified job completes successfully)
+
+**Example:**
+```bash
+lab cluster submit gpu --gpus 2 --cpus 16 --mem 256G --conda myenv -- python train.py
+```
 
 ## HuggingFace
 

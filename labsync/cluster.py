@@ -497,7 +497,10 @@ def cluster_submit(args):
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(prog='labsync cluster')
+    parser = argparse.ArgumentParser(
+        prog='labsync cluster',
+        description='SLURM cluster management utilities'
+    )
     subparsers = parser.add_subparsers(dest='subcommand', help='Cluster shortcuts')
 
     ls_parser = subparsers.add_parser('ls', help='List GPU status in the cluster')
@@ -517,15 +520,18 @@ def cluster():
     parser = get_parser()
 
     if len(sys.argv) > 2 and sys.argv[2] == 'submit':
-        submit_parser = argparse.ArgumentParser(prog='labsync cluster submit')
-        submit_parser.add_argument('partition', type=str)
-        submit_parser.add_argument('--gpus', type=int, default=1)
-        submit_parser.add_argument('--cpus', type=int, default=12)
-        submit_parser.add_argument('--mem', type=str, default='128G')
-        submit_parser.add_argument('--conda', type=str)
-        submit_parser.add_argument('--path', type=str)
-        submit_parser.add_argument('--account', type=str)
-        submit_parser.add_argument('--dependency', type=str)
+        submit_parser = argparse.ArgumentParser(
+            prog='labsync cluster submit',
+            description='Submit a SLURM job with specified resources'
+        )
+        submit_parser.add_argument('partition', type=str, help='SLURM partition to submit to')
+        submit_parser.add_argument('--gpus', type=int, default=1, help='Number of GPUs to request (default: 1)')
+        submit_parser.add_argument('--cpus', type=int, default=12, help='Number of CPUs per task (default: 12)')
+        submit_parser.add_argument('--mem', type=str, default='128G', help='Memory to request (default: 128G)')
+        submit_parser.add_argument('--conda', type=str, help='Conda environment to activate')
+        submit_parser.add_argument('--path', type=str, help='Prepend to PATH environment variable')
+        submit_parser.add_argument('--account', type=str, help='SLURM account to use')
+        submit_parser.add_argument('--dependency', type=str, help='Job ID dependency (afterok)')
 
         args, command = submit_parser.parse_known_args(sys.argv[3:])
         args.command = command

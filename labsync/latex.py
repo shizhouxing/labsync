@@ -5,9 +5,14 @@ import os
 import subprocess
 
 def get_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('command', type=str, choices=['git', 'clean', 'build'])
-    parser.add_argument('--main_file', '--main', '-m', type=str, default='main')
+    parser = argparse.ArgumentParser(
+        prog='lab tex',
+        description='LaTeX document build and synchronization utilities'
+    )
+    parser.add_argument('command', type=str, choices=['git', 'clean', 'build'],
+                        help='Command: git (sync with Git/Overleaf), clean (remove temp files), build (compile LaTeX)')
+    parser.add_argument('--main_file', '--main', '-m', type=str, default='main',
+                        help='Main LaTeX file name without extension (default: main)')
     return parser
 
 def latex():

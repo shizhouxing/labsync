@@ -5,12 +5,16 @@ import os
 import json
 import time
 from multiprocessing import Pool
+from datetime import datetime, timedelta
 from .utils import user_data_dir
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+from pydrive2.files import ApiRequestError
 from tqdm import tqdm
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
+from googleapiclient import errors
+from googleapiclient.discovery import build
 
 
 # silence error message "file_cache is only supported with oauth2client<4.0.0"
@@ -23,7 +27,10 @@ client_config_file = os.path.join(user_data_dir, 'client_secrets.json')
 
 
 def get_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog='lab gd',
+        description='Upload files and directories to Google Drive'
+    )
     parser.add_argument('-r', action='store_true', help='Upload directory (will be archived)')
     parser.add_argument('-d', '--direct', action='store_true', help='Upload directory directly without archiving')
     parser.add_argument('-f', '--folder', type=str, default=None, help='Folder ID or folder name to upload to')
@@ -63,7 +70,6 @@ def _select_from_multiple_matches(matches, item_type, get_name, get_id, get_extr
 def find_shared_drive_by_name(drive, drive_name):
     """Find shared drive by name and return its ID."""
     try:
-        from googleapiclient.discovery import build
         service = build('drive', 'v3', credentials=drive.auth.credentials)
         results = service.drives().list(pageSize=100).execute()
         drives = results.get('drives', [])
@@ -172,9 +178,6 @@ class ProgressFileWrapper:
 
 def upload_file_with_progress(drive_file, file_path):
     """Upload a file with progress bar using chunked resumable upload."""
-    from pydrive2.files import ApiRequestError
-    from googleapiclient import errors
-
     file_size = os.path.getsize(file_path)
     chunk_size = 256 * 1024 * 1024
 
@@ -464,7 +467,6 @@ def authenticate():
             gauth.LoadClientConfigFile(client_config_file)
             gauth.LocalWebserverAuth()
     else:
-        from datetime import datetime, timedelta
         if gauth.credentials.token_expiry:
             time_until_expiry = gauth.credentials.token_expiry - datetime.now()
             if time_until_expiry < timedelta(minutes=5):
